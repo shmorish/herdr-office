@@ -7,12 +7,12 @@ For people (and agents) changing this mod or making a new character. The user gu
 - `mods/office/`: the mod itself; this is the folder that goes into Herdr. The repo is laid out the way Herdr shares mods (herdr.dev/mods): `mods/<name>/`, `RECIPE.md` and `preview.png` at the top, and the repo topic `herdr-mod`.
   - `main.ts`: what happens in the office: walking, statuses, tea time, interns, the water reminder, the cat and night.
   - `doll.ts`: the characters' frames, where she stands, which agent is which character, and the hair colours.
-  - `scene.ts`: scene objects, the art table `ART`, and the room's `theme` (wall, wainscot and floor colours).
+  - `scene.ts`: scene objects, the art table `ART`, and the room's colours drawn as divs (wall, wainscot, rail, floor, board, calendar).
   - `i18n.ts`: every word on screen, in Japanese.
   - `debug.ts`: the settings panel behind the ⚙️ in the top right: behind a "Debug mode" checkbox (off by default; turning it off clears the fakes, the forced time, the forced water reminder and a tea time started from there), fake coworkers (action, character, hair colour, sub-agents, remote), time of day, and buttons for tea time and the water reminder, so every state can be seen without waiting for it. Kept in localStorage.
   - The mod's code is TypeScript (`*.ts`, strict). `build.sh` turns it into the `.js` Herdr loads (esbuild, imports kept); `char.js` stays JavaScript since the tools write it. Type-check with `tsc -p .`.
   - `chars/<character>/`: the character's frames and their list `char.js`, made by `tools/build_video.py`; don't edit by hand. So far `jirai`, `intern`, `designer-cute`, `engineer-hoodie`, `wavy-blouse`, `twintail-blazer` and `bob-jacket`. New ones go at the end of `CAST` in `doll.ts` (debug coworkers pick theirs by index), and each needs its two desk things in `SETS` in `tools/scene_art.py` and a `set_<name>` entry in `ART` in `scene.ts`. The names only describe the look; any agent can be any of them.
-  - `scene/<theme>/`: the scene's vector art, only `natural` in this fork, made by `tools/scene_art.py`; don't edit by hand.
+  - `scene/natural/`: the scene's vector art, made by `tools/scene_art.py`; don't edit by hand.
 - `tools/`: the scripts that make the art.
 - `art-src/video/<character>/`: the character videos, two per character. Not in git (they're only needed to make the frames again, and would make every install download about 60 MB more): get them from `art-src.zip` attached to the latest [release](https://github.com/kamikuo/herdr-moe-office/releases) and unzip it at the top of the repo. A new character's videos go in a new `art-src.zip` on the next release.
   - `setA.mp4`: idle, walk, typing.
@@ -53,14 +53,13 @@ To add a character: put its two videos in `art-src/video/<name>/` (and in the ne
 Make the scene art again:
 
 ```
-rm -rf mods/office/scene && .venv/bin/python -I tools/scene_art.py mods/office/scene
+rm -rf mods/office/scene && python3 -I tools/scene_art.py mods/office/scene
 ```
 
-## Languages
+## Text
 
-- All text on screen comes from `t(key)` in `mods/office/i18n.ts`. Add new text there in Japanese (this fork shows Japanese only), never as a literal in the code.
-- To add a language: add it to `LANGS` and a column to every entry. Missing entries fall back to English.
-- Translate for the feel, not word for word: these are short, playful office lines.
+- All text on screen comes from `t(key)` in `mods/office/i18n.ts`, in Japanese. Add new text there, never as a literal in the code. A missing key shows as the key itself.
+- Write for the feel: these are short, playful office lines.
 
 ## Character videos
 
@@ -84,12 +83,11 @@ rm -rf mods/office/scene && .venv/bin/python -I tools/scene_art.py mods/office/s
 - **Which agent is which character**: picked at random the first time an agent shows up (among the characters used least so far), and kept in localStorage (`office.cast`, the newest 400), so she stays the same after Herdr restarts. The hair colour comes from the address instead. In the ⚙️ panel each fake coworker can switch character.
 - **One prompt for every character**: all the characters' pink (hair, eyes, one accessory) measured the same, hue 336 to 348 and about the same `HAIR`, so `PINK` and `HAIR` are shared. Check again for a new character.
 
-## Scene themes
+## Scene colours
 
-- A theme is the same set of pieces at the same sizes in other colours and trimmings, so the layout, seats and desk tops stay put.
-- In `tools/scene_art.py`, `THEMES` gives each theme's colours by role (LAV: desks, couch, clock; MINT: door, counter, lamp, leaves; and so on), `J` adds lace (`lace()`) and bows (`bow()`) to the jirai and gothic themes, and `G` the gothic theme's crosses (`cross()`) and roses (`rose()`). In `mods/office/scene.js`, `THEMES` has the colours drawn as divs: wall, wainscot, rail, floor, baseboard, outline, board pins, whether the wainscot gets a lace trim, and how much the room dims at night (`night`: a dark scene is dark already).
-- Readability: keep the background (wall, wainscot, floor) low in contrast and far from the furniture's tone, light or dark, so the furniture and the girls stand out. A busy black-and-pink floor made the first jirai try unreadable.
-- This fork keeps one theme, `natural`: a plain office. `N` in `scene_art.py` drops the hearts, stars, bows, bunting and wallpaper pattern; the `J` and `G` branches are left from the upstream themes and never run. To add a theme back: add it to `THEMES` in `scene_art.py`, make `theme` in `scene.ts` selectable again, and make the art.
+- The room is one plain office (`natural`): no hearts, stars, bows, bunting or wallpaper pattern. The upstream repo's pastel, jirai-kei and gothic scenes were dropped in this fork.
+- In `tools/scene_art.py`, the colours are constants by role (LAV: desks, couch, clock; MINT: door, counter, lamp, leaves; and so on). In `mods/office/scene.ts`, the colours drawn as divs (wall, wainscot, rail, floor, baseboard, outline, board, calendar) are constants too; the wall and floor must match the art.
+- Readability: keep the background (wall, wainscot, floor) low in contrast and far from the furniture's tone, so the furniture and the girls stand out.
 
 ## Desk things
 
@@ -97,13 +95,13 @@ rm -rf mods/office/scene && .venv/bin/python -I tools/scene_art.py mods/office/s
 
 ## Swapping vector art for pictures
 
-- Every scene object is listed in the `ART` table in `mods/office/scene.js`, each with a file name and a size.
+- Every scene object is listed in the `ART` table in `mods/office/scene.ts`, each with a file name and a size.
 - Sizes are in scene units, turned into pixels from the panel's height when drawn.
 - To swap one for a picture:
-  - Draw a PNG with the same aspect ratio and put it in `mods/office/scene/<theme>/`.
+  - Draw a PNG with the same aspect ratio and put it in `mods/office/scene/natural/`.
   - Change that entry's `src` to the new file name.
 - Things that turn around (only the cat so far) also need a mirrored `<name>_l.png`: Herdr can't flip an element when drawing it. `scene_art.py` writes the `_l.svg` only for art written with `turns=True`, and `S.art(..., flip)` picks it.
-- The clock hands are one file per angle in `scene/<theme>/clock/`: hour hand `h_0` to `h_47`, one per 15 minutes; minute hand `m_0` to `m_59`, one per minute.
+- The clock hands are one file per angle in `scene/natural/clock/`: hour hand `h_0` to `h_47`, one per 15 minutes; minute hand `m_0` to `m_59`, one per minute.
 - Careful: `scene_art.py` deletes `mods/office/scene` first, so keep your pictures somewhere else, or don't run it again after swapping.
 
 ## Pitfalls
