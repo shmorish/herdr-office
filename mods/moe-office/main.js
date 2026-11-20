@@ -237,7 +237,7 @@ export default class Office extends View {
     setLang(this.debug.lang ?? this.lang); // the ⚙️ panel's choice, else the layout's
     S.setTheme(this.debug.scene ?? this.scene); // likewise the scene
     const { width: W, height: H } = this.size;
-    const list = agents();
+    const list = agents().filter((a) => { const ts = terminals(); const p = ts.find((k) => k.address === a.address)?.parent; return !ts.some((k) => k.address === p && k.state === "live"); });
     const all = terminals();
     const now = Date.now();
     const allFakes = Debug.fakes(this.debug, now);
