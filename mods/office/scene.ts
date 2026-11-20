@@ -9,17 +9,17 @@ import { dollSprite, BOX, PERSON } from "./doll.js";
 import { t } from "./i18n.js";
 
 // One art file and its size in units. A `mask` piece is drawn in one colour (art()'s `tint`).
-export interface ArtPiece { src: string; w: number; h: number; mask?: boolean }
+interface ArtPiece { src: string; w: number; h: number; mask?: boolean }
 // The sky out of the windows (main.js picks it by the hour).
 export interface Sky { top: Color; bottom: Color; stars?: boolean }
 // A team board row: colour, label, count, and whether to show it (shown unless false).
-export type BoardRow = [color: Color, label: string, n: number | string, show?: boolean];
+type BoardRow = [color: Color, label: string, n: number | string, show?: boolean];
 // A remote agent's tile on the video call.
 export interface Remote { address: string; pane?: string | null; machine: string; name: string; status: string | null; title: string }
 
 // The room's colours drawn as divs (the art is in scene/natural/, made by scene_art.py).
 export const INK: Color = "#4a4038"; // outlines and text
-export const WALL: Color = "#f1ede6";
+const WALL: Color = "#f1ede6";
 export const FLOOR: Color = "#d9b98f";
 const WAIN: Color = "#d8cbb8", WAIN_STRIPE: Color = "#d0c2ad", RAIL: Color = "#b89a78", BASE: Color = "#a88560";
 const PINS: [Color, Color] = ["#4f6b8a", "#6f8f69"];
@@ -137,8 +137,6 @@ export function window_(x: number, y: number, U: number, sky: Sky, sunX: number)
 // One-way motion: `loop` always goes there and back, so things that fall or drift are
 // placed from the clock on every redraw instead (the view redraws every ~110 ms).
 export const along = (from: number, to: number, period: number, phase = 0): number => from + (to - from) * (((Date.now() + phase) % period) / period);
-
-const tape = (x: number, y: number, U: number, c: Color) => div().absolute().left(x).top(y).w(5 * U).h(1.6 * U).bg(c).opacity(0.85);
 
 // The cat clock: hands from clock/, one file per angle.
 export function clock(x: number, y: number, U: number, date: Date): NativeElement {
