@@ -787,7 +787,7 @@ export default class Office extends View {
   // After dark: the room dims and busy screens glow.
   night(W: number, H: number, g: Geometry, byDesk: Record<number, Coworker>, deskCount: number, alarmed: Coworker[]) {
     const U = g.U;
-    const els = [div().absolute().left(0).top(0).w(W).h(H).bg("#2a2350").opacity(0.42 * S.nightDim())]; // less in a dark scene
+    const els = [div().absolute().left(0).top(0).w(W).h(H).bg("#2a2350").opacity(0.42)];
     const [sx, sy, sw, sh] = S.DESK.screen;
     for (let i = 0; i < deskCount; i++) {
       const a = byDesk[i];

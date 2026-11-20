@@ -1,5 +1,5 @@
 // The room and everything in it. Art is listed in ART: each entry is a file and its size in
-// scene units (1 unit = U px). They're vector placeholders from sprite/tools/scene_art.py;
+// scene units (1 unit = U px). They're vector placeholders from tools/scene_art.py;
 // to use a drawn image instead, save it with the same aspect ratio and change its `src`.
 // Boards, screens and signs whose content changes are drawn here with divs.
 import { div, svg, image } from "gpui-kit";
@@ -8,13 +8,6 @@ import { run } from "herdr";
 import { dollSprite, BOX, PERSON } from "./doll.js";
 import { t } from "./i18n.js";
 
-// The room's colours drawn as divs (the art is in scene/natural/, made by scene_art.py).
-interface Theme {
-  wall: Color; wain: Color; wainStripe: Color; rail: Color; floor: Color; base: Color; ink: Color;
-  lace: boolean; pins: Color[]; night?: number;
-  calendar: { head: Color; day: Color; week: Color };
-  board?: { bg: Color; border: Color; text: Color };
-}
 // One art file and its size in units. A `mask` piece is drawn in one colour (art()'s `tint`).
 export interface ArtPiece { src: string; w: number; h: number; mask?: boolean }
 // The sky out of the windows (main.js picks it by the hour).
@@ -24,9 +17,14 @@ export type BoardRow = [color: Color, label: string, n: number | string, show?: 
 // A remote agent's tile on the video call.
 export interface Remote { address: string; pane?: string | null; machine: string; name: string; status: string | null; title: string }
 
-const theme: Theme = { wall: "#f1ede6", wain: "#d8cbb8", wainStripe: "#d0c2ad", rail: "#b89a78", floor: "#d9b98f", base: "#a88560", ink: "#4a4038", lace: false, pins: ["#4f6b8a", "#6f8f69"],
-    calendar: { head: "#ffffff", day: "#4a4038", week: "#4f6b8a" },
-    board: { bg: "#fbf8f2", border: "#b89a78", text: "#4a4038" } };
+// The room's colours drawn as divs (the art is in scene/natural/, made by scene_art.py).
+export const INK: Color = "#4a4038"; // outlines and text
+export const WALL: Color = "#f1ede6";
+export const FLOOR: Color = "#d9b98f";
+const WAIN: Color = "#d8cbb8", WAIN_STRIPE: Color = "#d0c2ad", RAIL: Color = "#b89a78", BASE: Color = "#a88560";
+const PINS: [Color, Color] = ["#4f6b8a", "#6f8f69"];
+const CALENDAR = { head: "#ffffff", day: INK, week: "#4f6b8a" } satisfies Record<string, Color>;
+const BOARD = { bg: "#fbf8f2", border: RAIL, text: INK } satisfies Record<string, Color>;
 const DIR = "mods/office/scene/natural/";
 export const ART: Record<string, ArtPiece> = {
   desk: { src: "desk.svg", w: 32, h: 14 },
@@ -56,8 +54,6 @@ export const ART: Record<string, ArtPiece> = {
   doorSign: { src: "door_sign.svg", w: 12, h: 4 },
   window: { src: "window.svg", w: 30, h: 26 },
   clock: { src: "clock.svg", w: 14, h: 16 },
-  bunting: { src: "bunting.svg", w: 24, h: 5 },
-  wallpaper: { src: "wallpaper.svg", w: 16, h: 16 },
   floor: { src: "floor.svg", w: 32, h: 8 },
   rug: { src: "rug.svg", w: 40, h: 5 },
   catSit: { src: "cat_sit.svg", w: 14, h: 11 },
@@ -66,7 +62,6 @@ export const ART: Record<string, ArtPiece> = {
   catWalk1: { src: "cat_walk_1.svg", w: 14, h: 11 },
   stool: { src: "stool.svg", w: 9, h: 7 },
   laptop: { src: "laptop.svg", w: 6, h: 4 },
-  lace: { src: "lace.svg", w: 8, h: 2 },
 };
 
 // Where things sit, in units. Desk slot: SLOT wide; the chair, the seated doll's box and the
@@ -77,14 +72,6 @@ export const DESK = { x: 10, top: 12, chair: 2, monitor: 21, lamp: 34, set: 31,
   screen: [21 + 1.6, 1.6, 10.8, 7.4] /* x, y from the monitor's top, w, h */ };
 export const COUNTER_TOP = 11;
 export const CAT_W = 14;
-
-export const INK = theme.ink;
-export const WALL = theme.wall;
-export const FLOOR = theme.floor;
-export const PAPER: Color = "#fffaf3";
-
-// How much the room dims after dark (1 = fully; a dark scene is dark already).
-export const nightDim = () => theme.night ?? 1;
 
 
 // An art piece with its bottom-left corner at (x, bottom), in px. `flip`: the mirrored file
@@ -97,27 +84,18 @@ export function art(id: string, x: number, bottom: number, U: number, tint?: Col
 }
 export const artW = (id: string, U: number): number => ART[id].w * U;
 
-// Wall, wainscot, floor and bunting, filling the whole view.
+// Plain wall, wainscot and floor, filling the whole view.
 export function room(W: number, H: number, wallBottom: number, U: number): NativeElement[] {
   const els = [div().absolute().left(0).top(0).w(W).h(wallBottom).bg(WALL)];
-  const t = ART.wallpaper.w * U;
-  for (let y = 0; y < wallBottom; y += t)
-    for (let x = 0; x < W; x += t) els.push(art("wallpaper", x, y + t, U));
   const wain = 9 * U;
-  els.push(div().absolute().left(0).top(wallBottom - wain).w(W).h(wain).bg(theme.wain));
-  for (let x = U * 2; x < W; x += U * 4) els.push(div().absolute().left(x).top(wallBottom - wain + U).w(U * 1.4).h(wain - 2 * U).rounded(U).bg(theme.wainStripe));
-  if (theme.lace) {
-    const lw = ART.lace.w * U;
-    for (let x = 0; x < W; x += lw) els.push(art("lace", x, wallBottom - wain + 0.4 * U + ART.lace.h * U, U));
-  }
-  els.push(div().absolute().left(0).top(wallBottom - wain - U * 0.8).w(W).h(U * 1.2).rounded(U).bg(theme.rail));
+  els.push(div().absolute().left(0).top(wallBottom - wain).w(W).h(wain).bg(WAIN));
+  for (let x = U * 2; x < W; x += U * 4) els.push(div().absolute().left(x).top(wallBottom - wain + U).w(U * 1.4).h(wain - 2 * U).rounded(U).bg(WAIN_STRIPE));
+  els.push(div().absolute().left(0).top(wallBottom - wain - U * 0.8).w(W).h(U * 1.2).rounded(U).bg(RAIL));
   els.push(div().absolute().left(0).top(wallBottom).w(W).h(Math.max(0, H - wallBottom)).bg(FLOOR));
   const ft = ART.floor.h * U, fw = ART.floor.w * U;
   for (let y = wallBottom, r = 0; y < H; y += ft, r++)
     for (let x = (r % 2) * -fw / 2; x < W; x += fw) els.push(art("floor", x, y + ft, U));
-  els.push(div().absolute().left(0).top(wallBottom - U * 0.6).w(W).h(U * 1.2).bg(theme.base));
-  const bw = ART.bunting.w * U;
-  for (let x = 0; x < W; x += bw) els.push(art("bunting", x, ART.bunting.h * U + 2, U));
+  els.push(div().absolute().left(0).top(wallBottom - U * 0.6).w(W).h(U * 1.2).bg(BASE));
   return els;
 }
 
@@ -171,9 +149,9 @@ export function clock(x: number, y: number, U: number, date: Date): NativeElemen
 }
 
 // A tear-off calendar showing today, the clock's size: the month on the header, the day big,
-// the weekday. Its look is per theme (scene_art.py), and so are the text colours.
+// the weekday.
 export function calendar(x: number, y: number, U: number, date: Date, month: string, weekday: string): NativeElement {
-  const c = theme.calendar;
+  const c = CALENDAR;
   return div().absolute().left(x).top(y).w(ART.calendar.w * U).h(ART.calendar.h * U)
     .child(art("calendar", 0, ART.calendar.h * U, U))
     .child(div().absolute().left(1.4 * U).top(3.4 * U).w(10.2 * U).h(3.6 * U).flex().items_center().justify_center()
@@ -186,11 +164,11 @@ export function calendar(x: number, y: number, U: number, date: Date, month: str
 
 // The team board: counts by status.
 export function board(x: number, y: number, U: number, rows: BoardRow[]): NativeElement {
-  const b = theme.board ?? { bg: PAPER, border: "#ffb3c9", text: INK }; // a dark scene has a dark board
+  const b = BOARD;
   return div().absolute().left(x).top(y).w(44 * U).px(2.5 * U).py(1.6 * U).rounded(2.5 * U).bg(b.bg)
     .border_2().border_color(b.border).flex().flex_wrap().gap_x(3 * U).text_size(Math.max(9, 2.3 * U)).font_bold()
-    .child(div().absolute().left(4 * U).top(-U).size(2 * U).rounded_full().bg(theme.pins[0]))
-    .child(div().absolute().right(4 * U).top(-U).size(2 * U).rounded_full().bg(theme.pins[1]))
+    .child(div().absolute().left(4 * U).top(-U).size(2 * U).rounded_full().bg(PINS[0]))
+    .child(div().absolute().right(4 * U).top(-U).size(2 * U).rounded_full().bg(PINS[1]))
     .children(rows.filter(([, , , show]) => show !== false).map(([color, label, n]) =>
       div().w(17 * U).flex().items_center().gap(U).child(div().size(1.6 * U).flex_none().rounded_full().bg(color))
         .child(div().flex_1().text_color(b.text).child(label)).child(div().text_color(color).child(String(n)))));
