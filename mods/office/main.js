@@ -1,4 +1,4 @@
-// Moe Office: every agent is a coworker with a desk of their own, drawn as a girl cut from character videos (doll.js).
+// Office: every agent is a coworker with a desk of their own, drawn as a girl cut from character videos (doll.js).
 // Working: typing at the desk. Idle: chatting at the water cooler; after a while she takes
 // turns napping on the couch, chatting, getting a drink of water and a snack at the counter. Blocked: hand up (after five minutes she cries for help). Done: cheering,
 // a happy face on the screen, until you look. New agents come in the door; closed ones leave with a box.
@@ -28,7 +28,7 @@ const LOUNGE = ["nap", "nap", "snack", "chat", "nap", "water"];
 const ALARM_AFTER = 5 * 60 * 1000;
 const WATER_EVERY = 60, WATER_FOR = 3; // a water reminder at the cooler: the first WATER_FOR minutes of every hour
 const WALL_GAP = 40; // units: another window goes up on the wall only if the gaps stay this wide
-const WATER_KEY = "moe-office.water"; // when you last pressed "I drank it!"
+const WATER_KEY = "office.water"; // when you last pressed "I drank it!"
 const PARTY_FINISHES = 3, PARTY_WINDOW = 5 * 60 * 1000, PARTY_LENGTH = 8 * 60 * 1000;
 const GRAD_BOW = 2500;
 const COUCH_SEATS = 3;

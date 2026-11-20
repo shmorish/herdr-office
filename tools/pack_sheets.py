@@ -1,8 +1,8 @@
 """A character's frames -> one sprite sheet per action, facing and layer.
 
 Usage: pack_sheets.py <character>   (run by build_video.py at its end; or on its own)
-Input : mods/moe-office/chars/<character>/<anim>_<i>[_l]{.png,_hair.svg,_shade.png}, char.js
-Output: mods/moe-office/chars/<character>/<anim>[_l]{.png,_hair.svg,_shade.png}, and char.js
+Input : mods/office/chars/<character>/<anim>_<i>[_l]{.png,_hair.svg,_shade.png}, char.js
+Output: mods/office/chars/<character>/<anim>[_l]{.png,_hair.svg,_shade.png}, and char.js
         with each action's `cols` and the sheet's `pad`. The single frames are deleted.
 
 Why: a girl changing frames used to mean three new files to show; with many girls (all the
@@ -17,7 +17,7 @@ import sys, os, re, json, glob, base64, io
 from PIL import Image
 
 NAME = sys.argv[1]
-OUT = f"mods/moe-office/chars/{NAME}"
+OUT = f"mods/office/chars/{NAME}"
 PAD = 4
 
 

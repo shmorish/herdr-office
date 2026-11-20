@@ -11,7 +11,7 @@ import { t } from "./i18n.js";
 const theme = { wall: "#f1ede6", wain: "#d8cbb8", wainStripe: "#d0c2ad", rail: "#b89a78", floor: "#d9b98f", base: "#a88560", ink: "#4a4038", lace: false, pins: ["#4f6b8a", "#6f8f69"],
     calendar: { head: "#ffffff", day: "#4a4038", week: "#4f6b8a" },
     board: { bg: "#fbf8f2", border: "#b89a78", text: "#4a4038" } };
-const DIR = "mods/moe-office/scene/natural/";
+const DIR = "mods/office/scene/natural/";
 export const ART = {
   desk: { src: "desk.svg", w: 32, h: 14 },
   lamp: { src: "lamp.svg", w: 5, h: 9 },

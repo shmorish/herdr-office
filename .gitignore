@@ -5,5 +5,5 @@ __pycache__/
 gallery*.png
 .tools/
 .claude/settings.local.json
-mods/moe-office/gpui-kit.d.ts
+mods/office/gpui-kit.d.ts
 art-src/

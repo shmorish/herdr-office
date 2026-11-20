@@ -1,4 +1,4 @@
-# Moe Office
+# Office
 
 > [kamikuo/herdr-moe-office](https://github.com/kamikuo/herdr-moe-office) の個人用 fork。表示は日本語だけ、部屋はハートやリボンの無いナチュラルな部屋だけにしている。
 
@@ -27,16 +27,16 @@
 
 ## インストール
 
-1. このリポジトリを取得して、mod を Herdr に入れます（`~/.config/herdr-app/mods/moe-office` に入ります）：
+1. このリポジトリを取得して、mod を Herdr に入れます（`~/.config/herdr-app/mods/office` に入ります）：
 
    ```
-   git clone https://github.com/kamikuo/herdr-moe-office.git && cd herdr-moe-office && ./install.sh
+   git clone https://github.com/shmorish/herdr-office.git && cd herdr-office && ./install.sh
    ```
 
 2. レイアウト（`~/.config/herdr-app/layouts/<名前>.json`）にオフィス用のブロックを追加します。たとえばタブバーの下に、高さ 250 px で：
 
    ```json
-   { "id": "office", "type": "block", "content": { "mod": "moe-office" }, "size": { "px": 250 }, "min": 170, "max": 520 }
+   { "id": "office", "type": "block", "content": { "mod": "office" }, "size": { "px": 250 }, "min": 170, "max": 520 }
    ```
 
    オフィスと下のペインの境目をドラッグして高さを変えるには、オフィスが入っている row / column に `"resizable": false` を付けないでください（何も書かなければドラッグできます）。ドラッグした高さは Herdr が覚えています。`min` と `max` がドラッグできる範囲です。オフィスの中のものは高さに合わせて拡大・縮小します。

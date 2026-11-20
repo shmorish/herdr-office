@@ -1,4 +1,4 @@
-"""Vector placeholders for the moe-office scene -> <mod>/scene/<theme>/*.svg.
+"""Vector placeholders for the office scene -> <mod>/scene/<theme>/*.svg.
 
 Usage: scene_art.py <mod>/scene            (every theme)
        scene_art.py <mod>/scene <theme>    (one theme)
@@ -15,7 +15,7 @@ import os, sys, subprocess
 
 # Each theme's colours, by the role they play in the pastel office: LAV is the desks, couch
 # and clock; MINT the door, counter, lamp and leaves; SKY the water and glass; BUTTER the
-# stars and bells; PEACH the flower pot; WOOD the floor and boxes. The Moe Office scene.js
+# stars and bells; PEACH the flower pot; WOOD the floor and boxes. The office mod's scene.js
 # has the matching wall and floor colours (THEMES there).
 THEMES = {
     # Natural, a plain office: off-white walls, an oak floor, white and wood furniture, green

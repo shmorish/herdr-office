@@ -1,8 +1,8 @@
-# Moe Office
+# Office
 
 A cute office in a strip across the top of the window: every agent is a chibi anime girl with her own desk, so you see at a glance who is typing, who is stuck, who finished and who is on a break. She walks in through the door when the agent starts, waves for help when it's blocked, cheers with a happy face on her screen when it's done, chats at the water cooler when idle, and after a while takes turns napping on the couch, chatting, drinking water and having a snack.
 
-![Moe Office](preview.png)
+
 
 ## What you see
 
@@ -16,7 +16,7 @@ A block about 250 px tall (170 to 520 when dragged), scaled from its height: one
 
 The plant, the door and the bookshelf stay in the corners; the room in between is shared out: the lounge's gaps widen a little (up to 6 U each), the desks spread a little (up to 6 U), and the rest goes evenly on both sides of the desks, so they sit in the middle. Resizing stretches everything smoothly.
 - **On the wall**: bunting along the top; then, from the door to the bookshelf and evenly spaced: a window, a tear-off calendar with today's month, date and weekday (the clock's size and height; bunny ears in the pastel office, a big pink bow over a black header in jirai-kei, bat wings, a cross and a rose in gothic), a cat clock with real hands, a window, a team board (Working, Done, Stuck, Break, and when there are any Napping, Interns and Tea time), the video call when there are remote agents, and more windows while the gaps stay at least 40 U wide. Three little cat shelves with a paw print, in the gaps when they're wide enough: the first (by the door), the middle one (a little higher) and the last (by the bookshelf). All windows look out on one landscape: the sky for the time of day, a single sun or moon, clouds drifting across the whole room, and a skyline (lit windows at night).
-- **The girls**: seven characters cut from anime videos (a jirai-kei girl in black, a sailor-uniform intern, a girl in a blue dress with a sketchbook, an engineer in a hoodie with headphones, a girl with long wavy hair in a white blouse, a girl with twin tails in a navy blazer who holds a cat mug while idle, a girl with a short bob in a lilac jacket), each in one of 16 hair colours. Each agent gets a character at random the first time she shows up (one of those used least) and keeps it across restarts. The hair colour comes from the agent's address, unless someone in the office is already the same character with that colour: then she gets a colour none of them has. Both are kept in localStorage (`moe-office.cast`).
+- **The girls**: seven characters cut from anime videos (a jirai-kei girl in black, a sailor-uniform intern, a girl in a blue dress with a sketchbook, an engineer in a hoodie with headphones, a girl with long wavy hair in a white blouse, a girl with twin tails in a navy blazer who holds a cat mug while idle, a girl with a short bob in a lilac jacket), each in one of 16 hair colours. Each agent gets a character at random the first time she shows up (one of those used least) and keeps it across restarts. The hair colour comes from the agent's address, unless someone in the office is already the same character with that colour: then she gets a colour none of them has. Both are kept in localStorage (`office.cast`).
 - **The cat**: an orange tabby in the pastel office, white with pink stripes in jirai-kei, silver-lilac in gothic. She wanders the floor, naps on empty desks, and sits or naps up on the cat shelves or on top of the bookshelf. She never flies: she walks along the floor to under her spot and hops straight up, and hops straight down before walking off.
 - **A ⚙️ in the top right** opens the settings panel.
 
@@ -47,12 +47,12 @@ The language is English, Traditional Chinese or Japanese for all text (board, bu
 
 ## Built from
 
-- One mod, `mods/moe-office/` (`mod.json`: `{ "place": "none" }`), placed as a layout block: `{ "type": "block", "content": { "mod": "moe-office" }, "size": { "px": 250 }, "min": 170, "max": 520 }`. Optional `props`: `lang` (`en`, `zh-TW`, `ja`) and `scene` (`pastel`, `jirai`, `gothic`); the settings panel's choice wins.
+- One mod, `mods/office/` (`mod.json`: `{ "place": "none" }`), placed as a layout block: `{ "type": "block", "content": { "mod": "office" }, "size": { "px": 250 }, "min": 170, "max": 520 }`. Optional `props`: `lang` (`en`, `zh-TW`, `ja`) and `scene` (`pastel`, `jirai`, `gothic`); the settings panel's choice wins.
 - `main.js`: the view. Reads `agents()`, `terminals()` (sub-agents by `parent`), `spaces()` (tab `working_since`), `panes()` (branch), `shared("space.colors")` / `shared("space.icons")` (the sidebar's space tiles), `settings().zoom`; calls `setAgentOrder`, `run("pane.focus", { pane })`, `run("terminal.peek", { terminal })`. Positions move with `.transition("left"/"top")`; bubbles use `.frames()` and `.loop()`. Redraws on a timer at the shortest frame time drawn (at most 110 ms).
-- `doll.js`: the girls. Each frame is three layers: a 256-colour PNG without the hair; the hair, eyes and one accessory as a mask (an SVG wrapping a PNG) drawn with `svg().text_color(colour)`; a black/white PNG for the hair's shading. Each action is one sheet per layer (its frames in a grid); her box is clipped to one cell and the sheets move inside it, so changing frames loads nothing (one file per frame made girls blink out on an M1 with 8 or more of them). Facing left is a separate `_l` sheet. Every sheet is drawn once under the room first so it doesn't blink when first shown. Characters per agent are kept in localStorage (`moe-office.cast`).
+- `doll.js`: the girls. Each frame is three layers: a 256-colour PNG without the hair; the hair, eyes and one accessory as a mask (an SVG wrapping a PNG) drawn with `svg().text_color(colour)`; a black/white PNG for the hair's shading. Each action is one sheet per layer (its frames in a grid); her box is clipped to one cell and the sheets move inside it, so changing frames loads nothing (one file per frame made girls blink out on an M1 with 8 or more of them). Facing left is a separate `_l` sheet. Every sheet is drawn once under the room first so it doesn't blink when first shown. Characters per agent are kept in localStorage (`office.cast`).
 - `chars/<character>/`: the sheets and `char.js` (frame counts, ms per frame, size, feet anchor, `pingpong` for idle, `cols` and `pad` of the sheets), made by `tools/build_video.py` (then `tools/pack_sheets.py`) from two 10-second green-screen videos per character (image-to-video), with Real-ESRGAN, a chroma key and despill.
 - `scene.js` + `scene/<theme>/`: every furniture piece as an SVG in scene units (`ART` table), made by `tools/scene_art.py`; walls, wainscot, floor colours, screens, board and signs are divs. Clock hands are one SVG per angle.
-- `i18n.js`: every on-screen string in three languages. `debug.js`: the settings panel, saved in localStorage (`moe-office.debug`).
+- `i18n.js`: every on-screen string in three languages. `debug.js`: the settings panel, saved in localStorage (`office.debug`).
 - No programs run and nothing goes online.
 
 ## Watch out
@@ -64,12 +64,12 @@ The language is English, Traditional Chinese or Japanese for all text (board, bu
 - A short idle loop of near-still video frames looks like shaking: play a slow sway forwards then backwards.
 - Backgrounds must stay low-contrast and apart from the furniture's tone, or a busy scene becomes unreadable.
 - Hair recolouring needs the hair to be one hue (pink 335 to 351 degrees) that appears nowhere else on her except things meant to change with it; nothing green on the girls (green screen).
-- The mod's asset paths are written as `mods/moe-office/…`; rename them if the folder is renamed.
+- The mod's asset paths are written as `mods/office/…`; rename them if the folder is renamed.
 - Files: about 3 to 4 MB per character, 36 files.
 
 ## Done when
 
-- `herdr-app check ~/.config/herdr-app/mods/moe-office` passes and the block shows the office with a door, a couch, a counter, desks and a bookshelf.
+- `herdr-app check ~/.config/herdr-app/mods/office` passes and the block shows the office with a door, a couch, a counter, desks and a bookshelf.
 - Each live agent has a girl at a desk; her pose and screen follow her status (typing, waving with `!`, cheering with a happy face on the screen, at the cooler when idle).
 - Restarting Herdr keeps each agent's character and desk.
 - Hovering a girl shows her terminal title; clicking her focuses her pane.

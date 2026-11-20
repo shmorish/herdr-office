@@ -7,7 +7,7 @@ import { div } from "gpui-kit";
 import { COLOURS, SWATCH, FIXED, CHARACTERS } from "./doll.js";
 import { t } from "./i18n.js";
 
-const KEY = "moe-office.debug";
+const KEY = "office.debug";
 const MAX = 6;
 export const ACTIONS = ["idle", "walk", "typing", "blocked", "alarm", "done", "sleep"];
 

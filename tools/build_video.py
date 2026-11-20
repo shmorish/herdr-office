@@ -1,9 +1,9 @@
-"""Character videos -> sprite frames for the moe-office mod.
+"""Character videos -> sprite frames for the office mod.
 
 Usage: build_video.py <character>   (a key of CHARS)
 Input : art-src/video/<character>/setA.mp4, setB.mp4 (1280x720, 24 fps, character facing
         right, on white or on a green screen).
-Output: mods/moe-office/chars/<character>/<anim>[_l]{.png,_hair.svg,_shade.png} and char.js (the
+Output: mods/office/chars/<character>/<anim>[_l]{.png,_hair.svg,_shade.png} and char.js (the
         manifest). _l: mirrored (she faces left). Each frame is written on its own first, then
         pack_sheets.py puts each action's frames into one sheet per layer and facing.
 
@@ -21,7 +21,7 @@ from PIL import Image
 from scipy import ndimage as nd
 
 NAME = sys.argv[1]
-SRC, OUT = f"art-src/video/{NAME}", f"mods/moe-office/chars/{NAME}"
+SRC, OUT = f"art-src/video/{NAME}", f"mods/office/chars/{NAME}"
 FPS = 24
 # Real-ESRGAN (github.com/xinntao/Real-ESRGAN, the realesrgan-ncnn-vulkan macOS release),
 # unpacked into .tools/realesrgan/ (not in git).

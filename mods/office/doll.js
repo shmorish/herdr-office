@@ -55,7 +55,7 @@ export const FIXED = {};
 // address, unless someone in the office now (setPresent) is the same character with that
 // colour: then she gets one none of them has. Agents first seen before colours were kept
 // (the entry is just the character's name) keep the colour from their address.
-const CAST_KEY = "moe-office.cast";
+const CAST_KEY = "office.cast";
 const CAST_MAX = 400; // forget the oldest past this many
 let cast = null;
 let present = [];
@@ -144,7 +144,7 @@ function frame(who, name, i, face, U, colour) {
   const W = a.w * k, H = a.h * k;
   const pw = (a.w + CHAR.pad) * k, ph = (a.h + CHAR.pad) * k;
   const rows = Math.ceil(a.n / a.cols);
-  const f = `mods/moe-office/chars/${who}/${name}${face < 0 ? "_l" : ""}`;
+  const f = `mods/office/chars/${who}/${name}${face < 0 ? "_l" : ""}`;
   const layer = (el) => el.absolute().left(-(i % a.cols) * pw).top(-Math.floor(i / a.cols) * ph).w(a.cols * pw).h(rows * ph);
   return div().absolute().w(W).h(H).overflow_hidden()
     .child(layer(image(`${f}.png`)))
