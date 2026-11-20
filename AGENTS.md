@@ -7,11 +7,11 @@ For people (and agents) changing this mod or making a new character. The user gu
 - `mods/moe-office/`: the mod itself; this is the folder that goes into Herdr. The repo is laid out the way Herdr shares mods (herdr.dev/mods): `mods/<name>/`, `RECIPE.md` and `preview.png` at the top, and the repo topic `herdr-mod`.
   - `main.js`: what happens in the office: walking, statuses, tea time, interns, the water reminder, the cat and night.
   - `doll.js`: the characters' frames, where she stands, which agent is which character, and the hair colours.
-  - `scene.js`: scene objects, the art table `ART`, and the scene themes `THEMES` (wall, wainscot and floor colours).
+  - `scene.js`: scene objects, the art table `ART`, and the room's `theme` (wall, wainscot and floor colours).
   - `i18n.js`: every word on screen, in English, Traditional Chinese and Japanese.
   - `debug.js`: the settings panel behind the ⚙️ in the top right: the language and scene, then, behind a "Debug mode" checkbox (off by default; turning it off clears the fakes, the forced time, the forced water reminder and a tea time started from there), fake coworkers (action, character, hair colour, sub-agents, remote), time of day, and buttons for tea time and the water reminder, so every state can be seen without waiting for it. Kept in localStorage.
   - `chars/<character>/`: the character's frames and their list `char.js`, made by `tools/build_video.py`; don't edit by hand. So far `jirai`, `intern`, `designer-cute`, `engineer-hoodie`, `wavy-blouse`, `twintail-blazer` and `bob-jacket`. New ones go at the end of `CAST` in `doll.js` (debug coworkers pick theirs by index), and each needs its two desk things in `SETS` in `tools/scene_art.py` and a `set_<name>` entry in `ART` in `scene.js`. The names only describe the look; any agent can be any of them.
-  - `scene/<theme>/`: the scene's vector art, one folder per theme (`pastel`, `jirai`, `gothic`, `ocean`, `natural`), made by `tools/scene_art.py`; don't edit by hand.
+  - `scene/<theme>/`: the scene's vector art, only `natural` in this fork, made by `tools/scene_art.py`; don't edit by hand.
 - `tools/`: the scripts that make the art.
 - `art-src/video/<character>/`: the character videos, two per character. Not in git (they're only needed to make the frames again, and would make every install download about 60 MB more): get them from `art-src.zip` attached to the latest [release](https://github.com/kamikuo/herdr-moe-office/releases) and unzip it at the top of the repo. A new character's videos go in a new `art-src.zip` on the next release.
   - `setA.mp4`: idle, walk, typing.
@@ -57,8 +57,7 @@ rm -rf mods/moe-office/scene && .venv/bin/python -I tools/scene_art.py mods/moe-
 
 ## Languages
 
-- All text on screen comes from `t(key)` in `mods/moe-office/i18n.js`. Add new text there in all three languages, never as a literal in the code.
-- The language: the one picked with 🌐 in the ⚙️ panel (saved); else the block's props (`{ "lang": "zh-TW" }`); else English.
+- All text on screen comes from `t(key)` in `mods/moe-office/i18n.js`. Add new text there in Japanese (this fork shows Japanese only), never as a literal in the code.
 - To add a language: add it to `LANGS` and a column to every entry. Missing entries fall back to English.
 - Translate for the feel, not word for word: these are short, playful office lines.
 
@@ -89,8 +88,7 @@ rm -rf mods/moe-office/scene && .venv/bin/python -I tools/scene_art.py mods/moe-
 - A theme is the same set of pieces at the same sizes in other colours and trimmings, so the layout, seats and desk tops stay put.
 - In `tools/scene_art.py`, `THEMES` gives each theme's colours by role (LAV: desks, couch, clock; MINT: door, counter, lamp, leaves; and so on), `J` adds lace (`lace()`) and bows (`bow()`) to the jirai and gothic themes, and `G` the gothic theme's crosses (`cross()`) and roses (`rose()`). In `mods/moe-office/scene.js`, `THEMES` has the colours drawn as divs: wall, wainscot, rail, floor, baseboard, outline, board pins, whether the wainscot gets a lace trim, and how much the room dims at night (`night`: a dark scene is dark already).
 - Readability: keep the background (wall, wainscot, floor) low in contrast and far from the furniture's tone, light or dark, so the furniture and the girls stand out. A busy black-and-pink floor made the first jirai try unreadable.
-- Which theme: the one picked in the ⚙️ panel (saved); else the block's props (`{ "scene": "jirai" }`); else `pastel`.
-- To add a theme: add it to both `THEMES`, an i18n entry `scene.<name>`, and make the art again.
+- This fork keeps one theme, `natural`: a plain office. `N` in `scene_art.py` drops the hearts, stars, bows, bunting and wallpaper pattern; the `J` and `G` branches are left from the upstream themes and never run. To add a theme back: add it to `THEMES` in `scene_art.py`, make `theme` in `scene.js` selectable again, and make the art.
 
 ## Desk things
 

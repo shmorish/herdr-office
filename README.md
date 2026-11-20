@@ -1,68 +1,52 @@
 # Moe Office
 
-**English** · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
+> [kamikuo/herdr-moe-office](https://github.com/kamikuo/herdr-moe-office) の個人用 fork。表示は日本語だけ、部屋はハートやリボンの無いナチュラルな部屋だけにしている。
 
-A cute office mod for [Herdr](https://herdr.dev): every agent is a girl with her own desk, so you can see at a glance what everyone is up to.
+[Herdr](https://herdr.dev) 用のかわいいオフィス mod です。agent ひとりひとりが自分のデスクを持つ女の子になって、みんなが今なにをしているか一目でわかります。
 
-![Moe Office](preview.png)
-![Jirai-kei scene](preview-jirai.png)
-![Gothic lolita scene](preview-gothic.png)
+## みんなの様子
 
-## What they do
+- **作業中**：デスクでタイピング。画面のコードが一行ずつ流れていきます。
+- **困り中**：立ち上がって手を挙げて助けを呼びます。画面には「？」の顔文字。5 分たつと泣きながら「助けて」と叫び、画面はピンクに点滅して泣き顔に、名札も光ります。
+- **完了**：バンザイして、画面にはごきげんな顔文字。あなたが見に行くまで続きます。
+- **待機中**：ウォーターサーバーのそばでおしゃべり。10 分たつと、ソファでお昼寝、おしゃべり、お水、おやつを順番に。
+- 新しい agent はドアから入ってきて、閉じた agent は箱を抱えて帰っていきます。
+- サブ agent はインターンで、上司のデスクのそばに座ります。
+- 5 分以内に 3 人が作業を終えると、ケーキが届いてお茶会に。
+- デスクにはそれぞれの子の小物：ぬいぐるみ、いちごミルク、ティーカップ……
+- 毎正時、ウォーターサーバーのそばで*あなた*に水分補給をうながす吹き出しが出ます。飲んだら「飲んだよ！」を押してください。
+- カレンダーで今日の日付がわかります。窓はぜんぶ同じ景色で、太陽（月）はひとつだけ。
+- 猫が住んでいます。壁のキャットステップに登ったり、空いた机や本棚の上で昼寝したりします。暗くなると明かりが落ちます。
+- agent はそれぞれ何人かの女の子のうちの 1 人。初めて現れたときにランダムで決まり、Herdr を再起動しても変わりません。髪の色は 16 色。
 
-- **Working**: typing at her desk, lines scrolling up her screen.
-- **Stuck**: she stands up and waves for help; a puzzled face on her screen. After 5 minutes she cries for help, her screen flashes pink with a crying face, and her name tag flashes too.
-- **Done**: cheering, with happy faces on her screen, until you go and look.
-- **Idle**: chatting at the water cooler; after 10 minutes she takes turns napping on the couch, chatting, drinking water and having a snack.
-- New agents walk in through the door; closed ones leave carrying a box.
-- Sub-agents are interns, sitting by their boss's desk.
-- When 3 agents finish within 5 minutes, a cake arrives for tea time.
-- Each girl's desk has her own things: a plushie, strawberry milk, a teacup…
-- At the top of every hour a bubble at the water cooler reminds *you* to drink some water; press "I drank it!" when you have.
-- A calendar shows today; the windows share one view with one sun (or moon).
-- There's a cat: she climbs the cat shelves on the wall and naps on empty desks or the bookshelf. The lights go down after dark.
-- Each agent is one of several girls, picked at random when she first shows up and kept after restarts, with one of 16 hair colours.
+## 操作
 
-## Using it
+- 女の子にマウスを乗せる：今なにをしているか（と git のブランチ）を表示します。
+- 女の子かデスクをクリック：その子のターミナルへ移動します。
+- 右上の ⚙️：設定。「デバッグモード」にチェックを入れると、ダミーの同僚を追加して、キャラや髪色を変えたり、サブ agent をつけたり、リモート勤務（ビデオ会議）にしたり、時間帯を切り替えたり、お茶会や水分補給の吹き出しをすぐ出したりできます。
 
-- Hover a girl: see what she's working on (and the git branch).
-- Click her or her desk: jump to her terminal.
-- The ⚙️ in the top right corner: settings. Pick the language and the scene (the pastel office, pink-and-black jirai-kei with lace and ribbons, or a dark gothic lolita room for dark mode) here; tick "Debug mode" to add fake coworkers, switch their character and hair colour, give them sub-agents or send them home (the video call), try other times of day, and start tea time or the water reminder.
+## インストール
 
-## Install
-
-1. Get this repo and install the mod into Herdr (it goes to `~/.config/herdr-app/mods/moe-office`):
+1. このリポジトリを取得して、mod を Herdr に入れます（`~/.config/herdr-app/mods/moe-office` に入ります）：
 
    ```
    git clone https://github.com/kamikuo/herdr-moe-office.git && cd herdr-moe-office && ./install.sh
    ```
 
-2. Add a block for the office to your layout (`~/.config/herdr-app/layouts/<name>.json`), for example under the tab bar, 250 px tall:
+2. レイアウト（`~/.config/herdr-app/layouts/<名前>.json`）にオフィス用のブロックを追加します。たとえばタブバーの下に、高さ 250 px で：
 
    ```json
    { "id": "office", "type": "block", "content": { "mod": "moe-office" }, "size": { "px": 250 }, "min": 170, "max": 520 }
    ```
 
-   To change its height by dragging the edge between the office and the panes, the row or column it sits in must not have `"resizable": false` (resizable is the default). Herdr remembers the height you drag it to; `min` and `max` keep it in range. Everything in the office scales with the height.
+   オフィスと下のペインの境目をドラッグして高さを変えるには、オフィスが入っている row / column に `"resizable": false` を付けないでください（何も書かなければドラッグできます）。ドラッグした高さは Herdr が覚えています。`min` と `max` がドラッグできる範囲です。オフィスの中のものは高さに合わせて拡大・縮小します。
 
-You can also ask an agent in Herdr to install it for you: just give it this repo's URL.
+Herdr の中の agent にリポジトリの URL を渡して、インストールを頼むこともできます。
 
-## Language
+## プライバシー
 
-The office speaks English by default. Switch to Traditional Chinese or Japanese with the 🌐 button in the ⚙️ panel; it's remembered.
+- プログラムは実行せず、ネットにもつながりません。
 
-Or set it in the layout, by adding `lang` to the block's `props` (the ⚙️ choice wins over this):
+## 開発
 
-```json
-{ "id": "office", "type": "block", "content": { "mod": "moe-office", "props": { "lang": "ja" } }, "size": { "px": 250 } }
-```
-
-`lang` can be `en`, `zh-TW` or `ja`. The scene can be set the same way: `"scene": "pastel"`, `"jirai"` or `"gothic"`.
-
-## Privacy
-
-- It runs no programs and never goes online.
-
-## Development
-
-How to change the mod or make a new character: [AGENTS.md](AGENTS.md).
+mod の改造や新しいキャラクターの作り方は [AGENTS.md](AGENTS.md)（英語）にあります。

@@ -7,25 +7,11 @@ import { run } from "herdr";
 import { dollSprite, BOX, PERSON } from "./doll.js";
 import { t } from "./i18n.js";
 
-// Themes: the same pieces drawn in other colours (scene/<theme>/, made by scene_art.py),
-// and the colours of the wall, wainscot and floor that aren't pictures.
-export const THEMES = {
-  pastel: { wall: "#fdf0f3", wain: "#d9f2ea", wainStripe: "#c6eadd", rail: "#fffaf3", floor: "#f2d2ad", base: "#e9c39b", ink: "#7a6178", lace: false, pins: ["#f28daa", "#79c9ad"],
-    calendar: { head: "#ffffff", day: "#7a6178", week: "#f28daa" } },
-  gothic: { wall: "#241b2d", wain: "#1b1422", wainStripe: "#251c2e", rail: "#56406a", floor: "#2c2236", base: "#120b16", ink: "#160e1a", lace: true, pins: ["#c4506f", "#e4dfeb"], night: 0.5,
-    calendar: { head: "#ece4f2", day: "#2c2036", week: "#8c3d5e" },
-    board: { bg: "#2c2036", border: "#8c3d5e", text: "#e4dfeb" } },
-  ocean: { wall: "#13243a", wain: "#0f1e31", wainStripe: "#132840", rail: "#2d4f73", floor: "#16263a", base: "#0b1622", ink: "#0a1622", lace: false, pins: ["#7dcfff", "#5fd4c4"], night: 0.5,
-    calendar: { head: "#dbe7f3", day: "#16263a", week: "#4fb3d9" },
-    board: { bg: "#16263a", border: "#4fb3d9", text: "#dbe7f3" } },
-  natural: { wall: "#f1ede6", wain: "#d8cbb8", wainStripe: "#d0c2ad", rail: "#b89a78", floor: "#d9b98f", base: "#a88560", ink: "#4a4038", lace: false, pins: ["#4f6b8a", "#6f8f69"],
+// The room's colours drawn as divs (the art is in scene/natural/, made by scene_art.py).
+const theme = { wall: "#f1ede6", wain: "#d8cbb8", wainStripe: "#d0c2ad", rail: "#b89a78", floor: "#d9b98f", base: "#a88560", ink: "#4a4038", lace: false, pins: ["#4f6b8a", "#6f8f69"],
     calendar: { head: "#ffffff", day: "#4a4038", week: "#4f6b8a" },
-    board: { bg: "#fbf8f2", border: "#b89a78", text: "#4a4038" } },
-  jirai: { wall: "#fff0f5", wain: "#f9d3df", wainStripe: "#f4c2d1", rail: "#2a1f29", floor: "#fbe1ea", base: "#2a1f29", ink: "#3b2433", lace: true, pins: ["#f06b97", "#3b2433"],
-    calendar: { head: "#ffc9da", day: "#3b2433", week: "#f06b97" } },
-};
-let DIR = "mods/moe-office/scene/pastel/";
-let theme = THEMES.pastel;
+    board: { bg: "#fbf8f2", border: "#b89a78", text: "#4a4038" } };
+const DIR = "mods/moe-office/scene/natural/";
 export const ART = {
   desk: { src: "desk.svg", w: 32, h: 14 },
   lamp: { src: "lamp.svg", w: 5, h: 9 },
@@ -76,21 +62,14 @@ export const DESK = { x: 10, top: 12, chair: 2, monitor: 21, lamp: 34, set: 31,
 export const COUNTER_TOP = 11;
 export const CAT_W = 14;
 
-export let INK = theme.ink;
-export let WALL = theme.wall;
-export let FLOOR = theme.floor;
+export const INK = theme.ink;
+export const WALL = theme.wall;
+export const FLOOR = theme.floor;
 export const PAPER = "#fffaf3";
 
-// Unknown names fall back to the pastel office.
 // How much the room dims after dark (1 = fully; a dark scene is dark already).
 export const nightDim = () => theme.night ?? 1;
 
-export function setTheme(name) {
-  if (!(name in THEMES)) name = "pastel";
-  theme = THEMES[name];
-  DIR = `mods/moe-office/scene/${name}/`;
-  INK = theme.ink; WALL = theme.wall; FLOOR = theme.floor;
-}
 
 // An art piece with its bottom-left corner at (x, bottom), in px. `flip`: the mirrored file
 // (<name>_l.<ext>), for things that turn around. A `mask` piece is one colour, `tint`.

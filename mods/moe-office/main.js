@@ -6,11 +6,11 @@
 // arrives for tea time. A cat lives here. Lights go down after dark.
 // Hover anyone to see what they're working on; click them to go to their terminal.
 import { View, div } from "gpui-kit";
-import { agents, terminals, spaces, panes, shared, run, setAgentOrder, settings, props as layoutProps } from "herdr";
+import { agents, terminals, spaces, panes, shared, run, setAgentOrder, settings } from "herdr";
 import { dollSprite, warmup, frameTick, hash, castOf, setPresent, BOX, PERSON } from "./doll.js";
 import * as S from "./scene.js";
 import * as Debug from "./debug.js";
-import { t, setLang } from "./i18n.js";
+import { t } from "./i18n.js";
 
 // Walking speed in scene units per ms, so a girl covers the same share of her height per step at
 // any size (about 0.28 px/ms at the default 250 px block). Walks are linear: the walk cycle plays at
@@ -65,10 +65,6 @@ const descendants = (all, addr) =>
 
 export default class Office extends View {
   init(_props, cx) {
-    // The block's props from the layout come from herdr's props(), not init's argument.
-    const props = layoutProps();
-    this.lang = props?.lang; // the layout's language: "en" (default), "zh-TW" or "ja"
-    this.scene = props?.scene; // the layout's scene: "pastel" (default) or "jirai"
     this.size = { width: 1400, height: 220 };
     this.desk = {}; // address -> desk index, kept while the agent lives
     this.at = {}; // walker -> { spot, x, y, fromX, until, dur, face }
@@ -236,8 +232,6 @@ export default class Office extends View {
 
   render(cx) {
     if (!this.ticking) { this.ticking = true; cx.timer.after(frameTick(TICK), (cx) => { this.ticking = false; cx.notify(); }); }
-    setLang(this.debug.lang ?? this.lang); // the ⚙️ panel's choice, else the layout's
-    S.setTheme(this.debug.scene ?? this.scene); // likewise the scene
     const { width: W, height: H } = this.size;
     const list = agents().filter((a) => { const ts = terminals(); const p = ts.find((k) => k.address === a.address)?.parent; return !ts.some((k) => k.address === p && k.state === "live"); });
     const all = terminals();
@@ -375,7 +369,7 @@ export default class Office extends View {
         ...(this.waterTime(now) ? [this.water(g)] : []),
         ...(hovered && this.at[hovered.address] ? [this.thought(hovered, this.at[hovered.address], g, branches[hovered.pane])] : []),
         ...(here.length ? [] : [this.sign(W, g)]),
-        ...Debug.panel(this.debug, W, H, this.scene, Boolean(this.party)),
+        ...Debug.panel(this.debug, W, H, Boolean(this.party)),
       ]);
   }
 

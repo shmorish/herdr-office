@@ -18,33 +18,6 @@ import os, sys, subprocess
 # stars and bells; PEACH the flower pot; WOOD the floor and boxes. The Moe Office scene.js
 # has the matching wall and floor colours (THEMES there).
 THEMES = {
-    "pastel": dict(
-        INK="#7a6178", CREAM=("#fffaf3", "#f3e6da"), PINK=("#ffd6e2", "#ffb3c9", "#f28daa"),
-        LAV=("#e6dcfa", "#cbb8f0", "#a993dc"), MINT=("#d4f3e8", "#a8e3cf", "#79c9ad"),
-        SKY=("#d6ecff", "#a9d3f5"), BUTTER=("#fff0b8", "#ffd977"), PEACH=("#ffe0cc", "#ffc2a1"),
-        WOOD=("#f2d2ad", "#dfb185"), WALL="#fdf0f3", SCREEN="#5a4a63", SCREEN2="#6e5c78", CURTAIN="#ffd6e2"),
-    "jirai": dict(
-        INK="#3b2433", CREAM=("#fff7fa", "#f6d9e3"), PINK=("#ffc9da", "#ff9dbb", "#f06b97"),
-        LAV=("#3a2d38", "#2a1f29", "#f06b97"), MINT=("#3a2d38", "#ff9dbb", "#2a1f29"),
-        SKY=("#ffe3ec", "#ffb3c9"), BUTTER=("#f7f1f5", "#d9c7d3"), PEACH=("#3a2d38", "#2a1f29"),
-        WOOD=("#f6d9e3", "#3a2d38"), WALL="#fff0f5", SCREEN="#2a1f29", SCREEN2="#3a2d38", CURTAIN="#ffffff",
-        LACE=("#ffffff", "#f6c4d5"), RAIL_LACE="#2a1f29"),
-    # Gothic lolita, for dark mode: a dark room, the furniture in mid-tone plum and wine so it
-    # shows against it, silver-white lace, crosses and roses.
-    "gothic": dict(
-        INK="#160e1a", CREAM=("#ddd3e4", "#a99bb6"), PINK=("#8c3d5e", "#6e2b48", "#c4506f"),
-        LAV=("#56406a", "#45325a", "#b9a3d6"), MINT=("#56406a", "#7a2e4c", "#2c2036"),
-        SKY=("#6a5a8c", "#9a8ac0"), BUTTER=("#e4dfeb", "#b8afc6"), PEACH=("#3a2b48", "#2c2036"),
-        WOOD=("#6a5478", "#2c2036"), WALL="#241b2d", SCREEN="#140d18", SCREEN2="#2c2036", CURTAIN="#6e2340",
-        LACE=("#ece4f2", "#56406a"), RAIL_LACE="#ece4f2"),
-    # Ocean, for a navy and cyan Herdr layout: a night-blue room, the furniture in steel and
-    # sea blue, cyan bunting; the orange cat, the cake and the sky keep their colours.
-    "ocean": dict(
-        INK="#0a1622", CREAM=("#dbe7f3", "#2a4560"), PINK=("#9ad9f0", "#7dcfff", "#4fb3d9"),
-        LAV=("#1e3a57", "#5b8fc2", "#3d6d9e"), MINT=("#2d6b73", "#5fd4c4", "#79c9ad"),
-        SKY=("#d6ecff", "#a9d3f5"), BUTTER=("#fff0b8", "#ffd977"), PEACH=("#ffe0cc", "#ffc2a1"),
-        WOOD=("#16263a", "#24405c"), WALL="#13243a", SCREEN="#0d1b2a", SCREEN2="#2c4560", CURTAIN="#9ad9f0",
-        WALL_DOT="#8fc6e3", FLOOR_SHINE="#1d3550"),
     # Natural, a plain office: off-white walls, an oak floor, white and wood furniture, green
     # plants, a muted slate blue for the accents. No hearts, stars, bows, bunting or wallpaper.
     "natural": dict(
@@ -558,10 +531,6 @@ write("lace", 8, 2, lace(0, 0.2, 8, 0.5, T.get("RAIL_LACE")))
 # The cat: an orange tabby in the pastel office, a white cat with pink stripes in jirai-kei,
 # a silver-lilac one in gothic (a dark cat would vanish on the dark floor and furniture).
 CAT, CAT2, CAT3, BELLY = {
-    "pastel": ("#ffb15c", "#f08a3c", "#ffd29a", "#fff4e4"),
-    "jirai": ("#fffafc", "#f6a9c2", "#ffe3ec", "#ffffff"),
-    "gothic": ("#cfc6dc", "#8f80a8", "#e4dfeb", "#f2eef6"),
-    "ocean": ("#ffb15c", "#f08a3c", "#ffd29a", "#fff4e4"),
     "natural": ("#ffb15c", "#f08a3c", "#ffd29a", "#fff4e4"),
 }[THEME]
 def cat_head(x, y):

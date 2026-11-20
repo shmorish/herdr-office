@@ -4,9 +4,8 @@
 // localStorage. Fake coworkers are placed like real agents but don't count on the board and
 // can't be clicked through.
 import { div } from "gpui-kit";
-import { THEMES } from "./scene.js";
 import { COLOURS, SWATCH, FIXED, CHARACTERS } from "./doll.js";
-import { t, getLang, LANGS } from "./i18n.js";
+import { t } from "./i18n.js";
 
 const KEY = "moe-office.debug";
 const MAX = 6;
@@ -69,7 +68,7 @@ export function fakeKids(d) {
 }
 
 // A gear button in the corner opens the panel.
-export function panel(d, W, H, scene, partyOn) {
+export function panel(d, W, H, partyOn) {
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch {} };
   const act = (fn) => (_e, cx) => { fn(); save(); cx.notify(); };
   const btn = (id, label, fn, bg = "#7a6178") => div().id(id).flex_none().h(16).px(5).rounded(4).flex().items_center()
@@ -96,10 +95,6 @@ export function panel(d, W, H, scene, partyOn) {
     ]);
   });
   const ti = Math.max(0, TIMES.indexOf(d.hour ?? null));
-  const langs = Object.keys(LANGS);
-  const li = langs.indexOf(getLang());
-  const scenes = Object.keys(THEMES);
-  const si2 = Math.max(0, scenes.indexOf(d.scene ?? scene));
   const footer = div().flex().gap(3).children([
     btn("dbg-time", t(`time.${TIMES[ti] ?? "auto"}`), () => { d.hour = TIMES[(ti + 1) % TIMES.length]; }, "#e0a050"),
     partyOn ? btn("dbg-party-end", t("debug.partyEnd"), () => { d.partyEnd = Date.now(); }, "#c27ba0")
@@ -116,12 +111,6 @@ export function panel(d, W, H, scene, partyOn) {
     .flex().flex_col().gap(3)
     .children([
       div().font_bold().child(t("settings.title")),
-      div().flex().items_center().gap(3).children([
-        div().child(t("settings.lang")),
-        btn("dbg-lang", `🌐 ${LANGS[getLang()]}`, () => { d.lang = langs[(li + 1) % langs.length]; }, "#5b8def"),
-        div().ml(8).child(t("settings.scene")),
-        btn("dbg-scene", `🏠 ${t(`scene.${scenes[si2]}`)}`, () => { d.scene = scenes[(si2 + 1) % scenes.length]; }, "#c27ba0"),
-      ]),
       div().mt(4).flex().items_center().gap(3).child(
         btn("dbg-on", `${d.debug ? "☑" : "☐"} ${t("settings.debug")}`, () => { d.debug = !d.debug; if (!d.debug) clearDebug(d); }, "#7a6178")),
       ...(d.debug ? [div().font_bold().child(t("debug.title")), ...rows, footer] : []),
