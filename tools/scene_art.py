@@ -43,7 +43,8 @@ THEMES = {
         INK="#0a1622", CREAM=("#dbe7f3", "#2a4560"), PINK=("#9ad9f0", "#7dcfff", "#4fb3d9"),
         LAV=("#1e3a57", "#5b8fc2", "#3d6d9e"), MINT=("#2d6b73", "#5fd4c4", "#79c9ad"),
         SKY=("#d6ecff", "#a9d3f5"), BUTTER=("#fff0b8", "#ffd977"), PEACH=("#ffe0cc", "#ffc2a1"),
-        WOOD=("#16263a", "#24405c"), WALL="#13243a", SCREEN="#0d1b2a", SCREEN2="#2c4560", CURTAIN="#9ad9f0"),
+        WOOD=("#16263a", "#24405c"), WALL="#13243a", SCREEN="#0d1b2a", SCREEN2="#2c4560", CURTAIN="#9ad9f0",
+        WALL_DOT="#8fc6e3", FLOOR_SHINE="#1d3550"),
 }
 
 if len(sys.argv) < 3:  # every theme, each in its own run
@@ -69,6 +70,7 @@ BUTTER, BUTTER2 = T["BUTTER"]
 PEACH, PEACH2 = T["PEACH"]
 WOOD, WOOD2 = T["WOOD"]
 WALL = T["WALL"]
+WALL_DOT, FLOOR_SHINE = T.get("WALL_DOT", "#f6d7e1"), T.get("FLOOR_SHINE", "#f7dcbd")  # the pastel office's wallpaper dots and floor shine
 SCREEN_C, SCREEN_C2 = T["SCREEN"], T["SCREEN2"]
 LACE, LACE_HOLE = T.get("LACE", ("#ffffff", "#f6c4d5"))
 
@@ -522,13 +524,13 @@ else:
     write("wallpaper", 16, 16, "".join([
         f'<rect width="16" height="16" fill="{WALL}"/>',
         star(4, 4, 0.9, "#ffe3ec", False), heart(12, 12, 0.8, "#ffe3ec", False),
-        circ(12, 4, 0.35, "#f6d7e1", False), circ(4, 12, 0.35, "#f6d7e1", False),
+        circ(12, 4, 0.35, WALL_DOT, False), circ(4, 12, 0.35, WALL_DOT, False),
     ]))
     write("floor", 32, 8, "".join([
         f'<rect width="32" height="8" fill="{WOOD}"/>',
         f'<path d="M0 7.8 H32 M10 0 V7.8 M26 0 V7.8" stroke="{WOOD2}" stroke-width="0.35"/>',
-        f'<path d="M3 3.2 h4" stroke="#f7dcbd" stroke-width="0.5" stroke-linecap="round"/>',
-        f'<path d="M15 5 h6" stroke="#f7dcbd" stroke-width="0.5" stroke-linecap="round"/>',
+        f'<path d="M3 3.2 h4" stroke="{FLOOR_SHINE}" stroke-width="0.5" stroke-linecap="round"/>',
+        f'<path d="M15 5 h6" stroke="{FLOOR_SHINE}" stroke-width="0.5" stroke-linecap="round"/>',
     ]))
     # rug under the couch area: 40 x 5
     write("rug", 40, 5, f'<ellipse cx="20" cy="2.5" rx="19.6" ry="2.3" {s(LAV)}/>'
