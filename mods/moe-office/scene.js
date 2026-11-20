@@ -18,6 +18,9 @@ export const THEMES = {
   ocean: { wall: "#13243a", wain: "#0f1e31", wainStripe: "#132840", rail: "#2d4f73", floor: "#16263a", base: "#0b1622", ink: "#0a1622", lace: false, pins: ["#7dcfff", "#5fd4c4"], night: 0.5,
     calendar: { head: "#dbe7f3", day: "#16263a", week: "#4fb3d9" },
     board: { bg: "#16263a", border: "#4fb3d9", text: "#dbe7f3" } },
+  natural: { wall: "#f1ede6", wain: "#d8cbb8", wainStripe: "#d0c2ad", rail: "#b89a78", floor: "#d9b98f", base: "#a88560", ink: "#4a4038", lace: false, pins: ["#4f6b8a", "#6f8f69"],
+    calendar: { head: "#ffffff", day: "#4a4038", week: "#4f6b8a" },
+    board: { bg: "#fbf8f2", border: "#b89a78", text: "#4a4038" } },
   jirai: { wall: "#fff0f5", wain: "#f9d3df", wainStripe: "#f4c2d1", rail: "#2a1f29", floor: "#fbe1ea", base: "#2a1f29", ink: "#3b2433", lace: true, pins: ["#f06b97", "#3b2433"],
     calendar: { head: "#ffc9da", day: "#3b2433", week: "#f06b97" } },
 };

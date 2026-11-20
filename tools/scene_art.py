@@ -45,6 +45,14 @@ THEMES = {
         SKY=("#d6ecff", "#a9d3f5"), BUTTER=("#fff0b8", "#ffd977"), PEACH=("#ffe0cc", "#ffc2a1"),
         WOOD=("#16263a", "#24405c"), WALL="#13243a", SCREEN="#0d1b2a", SCREEN2="#2c4560", CURTAIN="#9ad9f0",
         WALL_DOT="#8fc6e3", FLOOR_SHINE="#1d3550"),
+    # Natural, a plain office: off-white walls, an oak floor, white and wood furniture, green
+    # plants, a muted slate blue for the accents. No hearts, stars, bows, bunting or wallpaper.
+    "natural": dict(
+        INK="#4a4038", CREAM=("#fbf8f2", "#e8e1d6"), PINK=("#dfe6ee", "#9fb3c8", "#4f6b8a"),
+        LAV=("#eceae6", "#d8d3cb", "#8c8478"), MINT=("#e3ebe0", "#a9c2a0", "#6f8f69"),
+        SKY=("#d6ecff", "#a9d3f5"), BUTTER=("#f6ecc8", "#e2c879"), PEACH=("#e8c9b0", "#c98f6b"),
+        WOOD=("#d9b98f", "#c19a6b"), WALL="#f1ede6", SCREEN="#2f3a45", SCREEN2="#45525f", CURTAIN="#e6e1d8",
+        FLOOR_SHINE="#e6cba4"),
 }
 
 if len(sys.argv) < 3:  # every theme, each in its own run
@@ -58,6 +66,7 @@ os.makedirs(OUT, exist_ok=True)
 T = THEMES[THEME]
 J = THEME in ("jirai", "gothic")  # the lace and ribbons
 G = THEME == "gothic"  # and crosses and roses
+N = THEME == "natural"  # none of the cute trimmings
 
 INK = T["INK"]       # outline
 SW = 0.45            # stroke width in units
@@ -142,6 +151,9 @@ def rect(x, y, w, h, fill, rx=0.6, extra=""):
 
 def circ(cx, cy, r, fill, stroke=True):
     return f'<circle cx="{cx}" cy="{cy}" r="{r}" ' + (s(fill) if stroke else f'fill="{fill}"') + '/>'
+
+if N:  # the plain office draws no hearts, stars or bows
+    heart = star = bow = lambda *a, **k: ""
 
 # --- desk: front of the desk, drawn over a seated doll. Top surface at height 12. --------
 # 29 x 14, placed at desk x + 10 units.
@@ -454,6 +466,8 @@ if G:
     ]), rose(10.3, 14.3, 0.9, PINK3) + lace(1.4, 7, 10.2, 0.4)
 elif J:
     cal_head, cal_top, cal_extra = LAV2, bow(6.5, 2.3, 6.4, PINK2, tails=False), lace(1.4, 7, 10.2, 0.4) + heart(10.4, 14.4, 0.6, PINK3)
+elif N:  # a plain wall calendar
+    cal_head, cal_top, cal_extra = PINK3, "", ""
 else:
     # (no transform: Herdr's SVG drawing skipped rotated shapes)
     ear = lambda cx, tilt: (f'<ellipse cx="{cx}" cy="2.6" rx="1.25" ry="2.5" {s(CREAM)}/>'
@@ -482,6 +496,8 @@ elif J:  # a black lace garland, a pink bow on every tile
         lace(0, 1.3, 24, 0.6, LAV2),
         bow(12, 1.6, 4.6, PINK2),
     ]))
+elif N:  # no bunting
+    write("bunting", 24, 5, "")
 else:
     write("bunting", 24, 5, "".join([
         f'<path d="M0 0.6 Q12 2.2 24 0.6" fill="none" stroke="{INK}" stroke-width="0.3"/>',
@@ -521,7 +537,7 @@ elif J:  # pink with thin stripes, little black bows and hearts
           f'<ellipse cx="20" cy="2.5" rx="15.6" ry="1.4" fill="none" stroke="{LACE}" stroke-width="0.5" stroke-dasharray="1 0.8"/>'
           + heart(20, 2.4, 0.8, PINK3, False))
 else:
-    write("wallpaper", 16, 16, "".join([
+    write("wallpaper", 16, 16, f'<rect width="16" height="16" fill="{WALL}"/>' if N else "".join([
         f'<rect width="16" height="16" fill="{WALL}"/>',
         star(4, 4, 0.9, "#ffe3ec", False), heart(12, 12, 0.8, "#ffe3ec", False),
         circ(12, 4, 0.35, WALL_DOT, False), circ(4, 12, 0.35, WALL_DOT, False),
@@ -546,6 +562,7 @@ CAT, CAT2, CAT3, BELLY = {
     "jirai": ("#fffafc", "#f6a9c2", "#ffe3ec", "#ffffff"),
     "gothic": ("#cfc6dc", "#8f80a8", "#e4dfeb", "#f2eef6"),
     "ocean": ("#ffb15c", "#f08a3c", "#ffd29a", "#fff4e4"),
+    "natural": ("#ffb15c", "#f08a3c", "#ffd29a", "#fff4e4"),
 }[THEME]
 def cat_head(x, y):
     return "".join([
