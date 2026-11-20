@@ -603,8 +603,8 @@ export default class Office extends View {
       if (now < gr.start + GRAD_BOW)
         return [box(dollSprite(k, "cheer", -1, gr.p, hash(k)), gr.x, gr.y).child(this.bubble(-8, "#7a6178", gr.p).child(t("thanks")))];
       const at = this.walk(`grad:${k}`, "door", g.door.x, g.door.y, WALK_SPEED, cx, { x: gr.x, y: gr.y });
-      if (now >= at.until && at.until > 0) { delete this.grads[k]; delete this.at[`grad:${k}`]; return []; }
-      return [box(dollSprite(k, "walk", -1, gr.p, hash(k)), at.x, at.y)
+      if (now >= at.until + 150 && at.until > 0) { delete this.grads[k]; delete this.at[`grad:${k}`]; return []; }
+      return [box(dollSprite(k, "walk", -1, gr.p, hash(k)), at.drawn ? at.x : (at.fromX ?? at.x), at.drawn ? at.y : (at.fromY ?? at.y)).map((el) => { at.drawn = true; return el; })
         .transition("left", { duration: at.dur, easing: "linear" }).transition("top", { duration: at.dur, easing: "linear" })];
     });
   }
@@ -623,8 +623,8 @@ export default class Office extends View {
   leavers(g, now) {
     return Object.keys(this.leaving).flatMap((k) => {
       const at = this.at[`leave:${k}`];
-      if (!at || now >= at.until) { delete this.leaving[k]; delete this.at[`leave:${k}`]; return []; }
-      return [div().id(`leave-${k}`).absolute().left(at.x).top(at.y - BOX * g.U).w(PERSON * g.U).h(BOX * g.U)
+      if (!at || now >= at.until + 150) { delete this.leaving[k]; delete this.at[`leave:${k}`]; return []; }
+      return [div().id(`leave-${k}`).absolute().left(at.drawn ? at.x : (at.fromX ?? at.x)).top((at.drawn ? at.y : (at.fromY ?? at.y)) - BOX * g.U).map((el) => { at.drawn = true; return el; }).w(PERSON * g.U).h(BOX * g.U)
         .transition("left", { duration: at.dur, easing: "linear" }).transition("top", { duration: at.dur, easing: "linear" })
         .child(this.carrier(k, Math.sign(at.x - at.fromX) || -1, g.U, "box"))];
     });
@@ -642,7 +642,7 @@ export default class Office extends View {
     const body = walking
       ? (leaving ? dollSprite("courier", "walk", face, g.U) : this.carrier("courier", face, g.U, "cakeCarry"))
       : dollSprite("courier", "cheer", 1, g.U);
-    return div().id("courier").absolute().left(at.x).top(at.y - BOX * g.U).w(PERSON * g.U).h(BOX * g.U)
+    return div().id("courier").absolute().left(at.drawn ? at.x : (at.fromX ?? at.x)).top((at.drawn ? at.y : (at.fromY ?? at.y)) - BOX * g.U).map((el) => { at.drawn = true; return el; }).w(PERSON * g.U).h(BOX * g.U)
       .transition("left", { duration: at.dur, easing: "linear" }).transition("top", { duration: at.dur, easing: "linear" })
       .child(body).when(!walking, (el) => el.child(this.bubble(-6, "#f28daa", g.U).child(t("pizzaHere"))));
   }
