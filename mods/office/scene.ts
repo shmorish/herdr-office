@@ -3,16 +3,32 @@
 // to use a drawn image instead, save it with the same aspect ratio and change its `src`.
 // Boards, screens and signs whose content changes are drawn here with divs.
 import { div, svg, image } from "gpui-kit";
+import type { Color, NativeElement } from "gpui-kit";
 import { run } from "herdr";
 import { dollSprite, BOX, PERSON } from "./doll.js";
 import { t } from "./i18n.js";
 
 // The room's colours drawn as divs (the art is in scene/natural/, made by scene_art.py).
-const theme = { wall: "#f1ede6", wain: "#d8cbb8", wainStripe: "#d0c2ad", rail: "#b89a78", floor: "#d9b98f", base: "#a88560", ink: "#4a4038", lace: false, pins: ["#4f6b8a", "#6f8f69"],
+interface Theme {
+  wall: Color; wain: Color; wainStripe: Color; rail: Color; floor: Color; base: Color; ink: Color;
+  lace: boolean; pins: Color[]; night?: number;
+  calendar: { head: Color; day: Color; week: Color };
+  board?: { bg: Color; border: Color; text: Color };
+}
+// One art file and its size in units. A `mask` piece is drawn in one colour (art()'s `tint`).
+export interface ArtPiece { src: string; w: number; h: number; mask?: boolean }
+// The sky out of the windows (main.js picks it by the hour).
+export interface Sky { top: Color; bottom: Color; stars?: boolean }
+// A team board row: colour, label, count, and whether to show it (shown unless false).
+export type BoardRow = [color: Color, label: string, n: number | string, show?: boolean];
+// A remote agent's tile on the video call.
+export interface Remote { address: string; pane?: string | null; machine: string; name: string; status: string | null; title: string }
+
+const theme: Theme = { wall: "#f1ede6", wain: "#d8cbb8", wainStripe: "#d0c2ad", rail: "#b89a78", floor: "#d9b98f", base: "#a88560", ink: "#4a4038", lace: false, pins: ["#4f6b8a", "#6f8f69"],
     calendar: { head: "#ffffff", day: "#4a4038", week: "#4f6b8a" },
     board: { bg: "#fbf8f2", border: "#b89a78", text: "#4a4038" } };
 const DIR = "mods/office/scene/natural/";
-export const ART = {
+export const ART: Record<string, ArtPiece> = {
   desk: { src: "desk.svg", w: 32, h: 14 },
   lamp: { src: "lamp.svg", w: 5, h: 9 },
   monitor: { src: "monitor.svg", w: 14, h: 13 },
@@ -65,7 +81,7 @@ export const CAT_W = 14;
 export const INK = theme.ink;
 export const WALL = theme.wall;
 export const FLOOR = theme.floor;
-export const PAPER = "#fffaf3";
+export const PAPER: Color = "#fffaf3";
 
 // How much the room dims after dark (1 = fully; a dark scene is dark already).
 export const nightDim = () => theme.night ?? 1;
@@ -73,16 +89,16 @@ export const nightDim = () => theme.night ?? 1;
 
 // An art piece with its bottom-left corner at (x, bottom), in px. `flip`: the mirrored file
 // (<name>_l.<ext>), for things that turn around. A `mask` piece is one colour, `tint`.
-export function art(id, x, bottom, U, tint, flip = false) {
+export function art(id: string, x: number, bottom: number, U: number, tint?: Color, flip = false): NativeElement {
   const a = ART[id];
   const src = DIR + (flip ? a.src.replace(/(\.\w+)$/, "_l$1") : a.src);
   const el = a.mask ? svg(src).text_color(tint ?? INK) : image(src);
   return el.absolute().left(x).top(bottom - a.h * U).w(a.w * U).h(a.h * U);
 }
-export const artW = (id, U) => ART[id].w * U;
+export const artW = (id: string, U: number): number => ART[id].w * U;
 
 // Wall, wainscot, floor and bunting, filling the whole view.
-export function room(W, H, wallBottom, U) {
+export function room(W: number, H: number, wallBottom: number, U: number): NativeElement[] {
   const els = [div().absolute().left(0).top(0).w(W).h(wallBottom).bg(WALL)];
   const t = ART.wallpaper.w * U;
   for (let y = 0; y < wallBottom; y += t)
@@ -118,7 +134,7 @@ const SKYLINE = (() => {
   return out;
 })();
 
-export function window_(x, y, U, sky, sunX) {
+export function window_(x: number, y: number, U: number, sky: Sky, sunX: number): NativeElement {
   const [gx, gy, gw, gh] = [3 * U, 3 * U, 24 * U, 20 * U];
   const ox = x + gx; // where this glass sits in the room
   const night = Boolean(sky.stars);
@@ -142,21 +158,21 @@ export function window_(x, y, U, sky, sunX) {
 
 // One-way motion: `loop` always goes there and back, so things that fall or drift are
 // placed from the clock on every redraw instead (the view redraws every ~110 ms).
-export const along = (from, to, period, phase = 0) => from + (to - from) * (((Date.now() + phase) % period) / period);
+export const along = (from: number, to: number, period: number, phase = 0): number => from + (to - from) * (((Date.now() + phase) % period) / period);
 
-const tape = (x, y, U, c) => div().absolute().left(x).top(y).w(5 * U).h(1.6 * U).bg(c).opacity(0.85);
+const tape = (x: number, y: number, U: number, c: Color) => div().absolute().left(x).top(y).w(5 * U).h(1.6 * U).bg(c).opacity(0.85);
 
 // The cat clock: hands from clock/, one file per angle.
-export function clock(x, y, U, date) {
+export function clock(x: number, y: number, U: number, date: Date): NativeElement {
   const h = (date.getHours() % 12) * 4 + Math.floor(date.getMinutes() / 15), m = date.getMinutes();
-  const hand = (f) => image(`${DIR}clock/${f}.svg`).absolute().left(0).top(0).w(ART.clock.w * U).h(ART.clock.h * U);
+  const hand = (f: string) => image(`${DIR}clock/${f}.svg`).absolute().left(0).top(0).w(ART.clock.w * U).h(ART.clock.h * U);
   return div().absolute().left(x).top(y).w(ART.clock.w * U).h(ART.clock.h * U)
     .child(art("clock", 0, ART.clock.h * U, U)).child(hand(`m_${m}`)).child(hand(`h_${h}`));
 }
 
 // A tear-off calendar showing today, the clock's size: the month on the header, the day big,
 // the weekday. Its look is per theme (scene_art.py), and so are the text colours.
-export function calendar(x, y, U, date, month, weekday) {
+export function calendar(x: number, y: number, U: number, date: Date, month: string, weekday: string): NativeElement {
   const c = theme.calendar;
   return div().absolute().left(x).top(y).w(ART.calendar.w * U).h(ART.calendar.h * U)
     .child(art("calendar", 0, ART.calendar.h * U, U))
@@ -169,7 +185,7 @@ export function calendar(x, y, U, date, month, weekday) {
 }
 
 // The team board: counts by status.
-export function board(x, y, U, rows) {
+export function board(x: number, y: number, U: number, rows: BoardRow[]): NativeElement {
   const b = theme.board ?? { bg: PAPER, border: "#ffb3c9", text: INK }; // a dark scene has a dark board
   return div().absolute().left(x).top(y).w(44 * U).px(2.5 * U).py(1.6 * U).rounded(2.5 * U).bg(b.bg)
     .border_2().border_color(b.border).flex().flex_wrap().gap_x(3 * U).text_size(Math.max(9, 2.3 * U)).font_bold()
@@ -181,18 +197,18 @@ export function board(x, y, U, rows) {
 }
 
 // A face in a frame: the doll's head and shoulders.
-function headshot(address, w, h, U) {
+function headshot(address: string, w: number, h: number, U: number): NativeElement {
   const p = U * 1.25;
   return div().relative().w(w).h(h).overflow_hidden().rounded(U).bg("#e6dcfa")
     .child(div().absolute().left(w / 2 - 8 * p).top(h * 0.08 - 2 * p).w(PERSON * p).h(BOX * p).child(dollSprite(address, "idle", 1, p)));
 }
 
 // The video call with everyone working from another machine. Click a tile to go there.
-export function videoWall(x, y, U, remotes) {
-  const ring = { working: "#7fb6ff", blocked: "#ff8a9a", done: "#79c9ad", idle: "#cbb8f0" };
+export function videoWall(x: number, y: number, U: number, remotes: Remote[]): NativeElement {
+  const ring: Record<string, Color> = { working: "#7fb6ff", blocked: "#ff8a9a", done: "#79c9ad", idle: "#cbb8f0" };
   const ts = 13 * U; // a tile's size (not `t`: that's the translator)
-  const tile = (r) => div().id(`call-${r.address}`).w(ts).h(ts).relative().overflow_hidden().rounded(2 * U)
-    .border_2().border_color(ring[r.status] ?? ring.idle).cursor_pointer().tooltip(r.title)
+  const tile = (r: Remote) => div().id(`call-${r.address}`).w(ts).h(ts).relative().overflow_hidden().rounded(2 * U)
+    .border_2().border_color(ring[r.status as string] ?? ring.idle).cursor_pointer().tooltip(r.title)
     .on_click(() => { if (r.pane) run("pane.focus", { pane: r.pane }); })
     .child(headshot(r.address, ts, ts, U * 0.9))
     .when(r.status === "idle", (el) => el.child(div().absolute().left(0).top(0).size_full().bg("#5a4a63").opacity(0.35)))
@@ -210,7 +226,7 @@ export function videoWall(x, y, U, remotes) {
     .child(div().flex().flex_wrap().gap(U).max_w(ts * 3 + 2 * U).children(remotes.slice(0, 6).map(tile)));
 }
 
-export function door(x, wallBottom, U, open) {
+export function door(x: number, wallBottom: number, U: number, open: boolean): NativeElement {
   return div().absolute().left(0).top(0).size_full().children([
     art(open ? "doorOpen" : "door", x, wallBottom + 0.4 * U, U),
     art("doorSign", x + 2.5 * U, wallBottom - ART.door.h * U - 0.6 * U, U),

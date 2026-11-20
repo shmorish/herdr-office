@@ -6,11 +6,31 @@
 // arrives for tea time. A cat lives here. Lights go down after dark.
 // Hover anyone to see what they're working on; click them to go to their terminal.
 import { View, div } from "gpui-kit";
+import type { AsyncContext, ClickEvent, Color, Context, NativeElement } from "gpui-kit";
 import { agents, terminals, spaces, panes, shared, run, setAgentOrder, settings } from "herdr";
+import type { AgentInfo, TabInfo } from "herdr";
 import { dollSprite, warmup, frameTick, hash, castOf, setPresent, BOX, PERSON } from "./doll.js";
 import * as S from "./scene.js";
 import * as Debug from "./debug.js";
+import type { DebugState, FakeAgent } from "./debug.js";
 import { t } from "./i18n.js";
+
+// Someone in the office: a real agent (herdr's AgentInfo) or a fake one from the debug panel,
+// which has only some of the fields.
+type Coworker = (AgentInfo | FakeAgent) & Partial<Omit<AgentInfo, "status">> & { status: string; debug?: boolean; action?: string; remote?: boolean };
+// A terminal as `terminals()` gives it (or a fake sub-agent shaped like one): the fields read here.
+interface Term { address: string; parent?: string | null; state?: string; status?: string | null }
+interface Point { x: number; y: number }
+interface Size { width: number; height: number }
+// A walker: where she is heading (`x`, `y`), where from, and when she gets there.
+interface At { spot: string | null; x: number; y: number; fromX: number; fromY?: number; until: number; dur: number; face?: number; drawn?: boolean }
+// Where someone goes this render.
+interface Place { spot: string; x: number; y: number; face: number }
+interface Party { start: number; debug: boolean }
+interface Seat { x: number; y: number; p: number }
+interface Cat { goal: "sit" | "sleep" | "perch"; desk?: number | null; perch?: number; nap?: boolean; x?: number; since: number }
+interface WallItem { w: number; window?: boolean; draw?: (x: number) => NativeElement; x?: number }
+type Geometry = ReturnType<Office["geometry"]>;
 
 // Walking speed in scene units per ms, so a girl covers the same share of her height per step at
 // any size (about 0.28 px/ms at the default 250 px block). Walks are linear: the walk cycle plays at
@@ -37,34 +57,60 @@ const TICK = 110; // ms between redraws at most; sooner while she plays faster f
 const TERM_LINE = 500, TERM_FRESH = 130; // the working screen: ms per line; how long a new line stays empty (over one redraw)
 const RESIZE_SETTLE = 250; // ms the size must hold still before the office redraws at it
 
-const CODE = ["#9be3c9", "#ffd977", "#b9b0ff", "#ffb3c9"];
-const STATUS = { working: "#7fb6ff", blocked: "#ff8a9a", done: "#79c9ad", idle: "#cbb8f0" };
-const SCREEN = { working: "#3d3f6b", blocked: "#6b3b52", done: "#2f5b4f", idle: "#4a4560" };
+const CODE: Color[] = ["#9be3c9", "#ffd977", "#b9b0ff", "#ffb3c9"];
+const STATUS: Record<string, Color> = { working: "#7fb6ff", blocked: "#ff8a9a", done: "#79c9ad", idle: "#cbb8f0" };
+const SCREEN: Record<string, Color> = { working: "#3d3f6b", blocked: "#6b3b52", done: "#2f5b4f", idle: "#4a4560" };
 // The sidebar's space colours (mods/my-spaces), by stored name.
-const MARK = { ansi6: "#22a99a", ansi3: "#e3814f", ansi4: "#5b8def", ansi5: "#8b7cf6", ansi2: "#3fae6a", ansi1: "#d9649a" };
+const MARK: Record<string, Color> = { ansi6: "#22a99a", ansi3: "#e3814f", ansi4: "#5b8def", ansi5: "#8b7cf6", ansi2: "#3fae6a", ansi1: "#d9649a" };
 // Done: a happy face on the screen, cycling.
 const HAPPY = ["(≧▽≦)", "(≧▽≦)♡", "ヽ(>▽<)ノ", "(*^▽^*)"];
 // Stuck: a puzzled face; stuck too long: crying, the screen flashing pink.
 const PUZZLED = ["(・_・?)", "(・・?)", "(°ー°〃)", "(・_・;)"];
 const CRYING = ["(╥_╥)", "(T_T)", "(ToT)/", "(;_;)"];
 
-function sky(hour) {
+function sky(hour: number): S.Sky {
   if (hour < 5 || hour >= 21) return { top: "#3b3f7a", bottom: "#6a6aa8", stars: true };
   if (hour < 7) return { top: "#bcd7f5", bottom: "#ffd0b0" };
   if (hour < 17) return { top: "#a9d8ff", bottom: "#e1f2ff" };
   if (hour < 19) return { top: "#ffd6a8", bottom: "#ffb3a0" };
   return { top: "#7a6fb0", bottom: "#ff9fa8" };
 }
-const lightsDown = (hour) => hour >= 20 || hour < 6;
+const lightsDown = (hour: number) => hour >= 20 || hour < 6;
 
-const rotate = (list, n) => list.map((_, i) => list[(i + n) % list.length]);
-const remote = (address) => address.includes("/");
+const rotate = <T,>(list: T[], n: number): T[] => list.map((_, i) => list[(i + n) % list.length]);
+const remote = (address: string) => address.includes("/");
 // Live sub-agents under `addr`, however deep.
-const descendants = (all, addr) =>
+const descendants = (all: Term[], addr: string): Term[] =>
   all.filter((k) => k.parent === addr && k.state === "live").flatMap((k) => [k, ...descendants(all, k.address)]);
 
 export default class Office extends View {
-  init(_props, cx) {
+  size!: Size;
+  desk!: Record<string, number>;
+  at!: Record<string, At>;
+  seen!: Record<string, unknown>;
+  idleSince!: Record<string, number>;
+  blockedSince!: Record<string, number>;
+  finishes!: number[];
+  party!: Party | null;
+  leaving!: Record<string, true>;
+  kids!: Record<string, Seat>;
+  grads!: Record<string, Seat & { start: number }>;
+  away!: number[];
+  hovered!: string | null;
+  started!: boolean;
+  cat!: Cat;
+  now!: Date;
+  debug!: DebugState;
+  ticking?: boolean;
+  g!: Geometry;
+  live!: Set<string>;
+  doorUntil?: number;
+  catShelves?: Point[];
+  sized?: boolean;
+  nextSize?: Size | null;
+  resizedAt?: number;
+
+  init(_props: unknown, cx: AsyncContext) {
     this.size = { width: 1400, height: 220 };
     this.desk = {}; // address -> desk index, kept while the agent lives
     this.at = {}; // walker -> { spot, x, y, fromX, until, dur, face }
@@ -89,7 +135,7 @@ export default class Office extends View {
   // Desks are handed out lowest free first, and nobody swaps seats. Agents that closed head
   // for the door with a box, and their desk goes: the desks after it move up one, in the same
   // order (their girls walk over), so no empty desk is left in the row.
-  seat(list, door, cx) {
+  seat(list: Coworker[], door: Point, cx: Context) {
     const live = new Set(list.map((a) => a.address));
     let gone = false;
     for (const k of Object.keys(this.desk)) {
@@ -114,15 +160,15 @@ export default class Office extends View {
   }
 
   // Since-when for idle and blocked, and finishes for the pizza.
-  track(list, now, cx) {
-    const changed = {};
+  track(list: Coworker[], now: number, cx: Context) {
+    const changed: Record<string, number | null> = {};
     for (const s of spaces()) for (const t of s.tabs ?? []) changed[t.id] = t.changed_at;
     for (const a of list) {
       const was = this.seen[a.address];
       if (a.status !== "idle") delete this.idleSince[a.address];
-      else this.idleSince[a.address] ??= changed[a.tab] ?? now;
+      else this.idleSince[a.address] ??= changed[a.tab!] ?? now;
       if (a.status !== "blocked") delete this.blockedSince[a.address];
-      else this.blockedSince[a.address] ??= was === "blocked" || !was ? (changed[a.tab] ?? now) : now;
+      else this.blockedSince[a.address] ??= was === "blocked" || !was ? (changed[a.tab!] ?? now) : now;
       if (this.started && a.status === "done" && was && was !== "done" && !a.debug) this.finishes.push(now);
       this.seen[a.address] = a.status;
     }
@@ -131,7 +177,7 @@ export default class Office extends View {
   }
 
   // Tea time: a courier brings a cake to the counter and everyone idle gathers there.
-  startParty(now, cx, debug = false) {
+  startParty(now: number, cx: Context, debug = false) {
     const party = (this.party = { start: now, debug });
     this.finishes = [];
     delete this.at.courier;
@@ -139,7 +185,7 @@ export default class Office extends View {
   }
 
   // Whether a debug-panel button stamped `this.debug[name]` since the last render.
-  pressed(name) {
+  pressed(name: "party" | "partyEnd") {
     this.seen ??= {};
     const v = this.debug[name] ?? null;
     const was = this.seen[name];
@@ -149,10 +195,10 @@ export default class Office extends View {
 
   // Starts a walk when a walker's spot changes; returns where it is (or is heading).
   // `start`: where a new walker appears (the door), instead of at its spot.
-  walk(key, spot, x, y, speed, cx, start) {
+  walk(key: string, spot: string | null, x: number, y: number, speed: number, cx: Context, start?: Point | null): At {
     const now = Date.now();
     const fresh = !this.at[key] && Boolean(start);
-    const at = this.at[key] ?? (start ? { ...start, spot: null } : null);
+    const at = this.at[key] ?? (start ? { ...start, spot: null } as At : null);
     if (!at) return (this.at[key] = { spot, x, y, fromX: x, until: 0, dur: 1 });
     if (at.spot === spot && at.x === x && at.y === y) return at;
     const dur = Math.max(400, Math.hypot(x - at.x, y - at.y) / (speed * this.g.U));
@@ -169,12 +215,12 @@ export default class Office extends View {
   // shared out: the lounge's gaps widen a little (up to 6 units each), the desks spread a
   // little (up to 6 units more apart), and the rest goes evenly on both sides of the desks, so
   // the desks sit in the middle. So resizing stretches everything smoothly.
-  geometry(W, H, deskCount) {
+  geometry(W: number, H: number, deskCount: number) {
     const U = Math.max(2, Math.min(6, H / 68));
     const floorY = H - Math.max(26, 7 * U);
     const wallBottom = floorY - 14 * U;
     const slot = S.SLOT * U;
-    const w = (id) => S.artW(id, U);
+    const w = (id: string) => S.artW(id, U);
     const plantL = 3 * U;
     const doorX = plantL + w("plant") + 2 * U;
     const shelfW = w("bookshelf");
@@ -187,7 +233,7 @@ export default class Office extends View {
     const front = Math.min(deskCount, FRONT_ROW);
     const back = Math.max(0, deskCount - FRONT_ROW);
     const cols = Math.max(front, back);
-    const groupW = (pitch) => Math.max(front ? (front - 1) * pitch + slot : 0, back ? (back - 1) * pitch + pitch / 2 + slot : 0);
+    const groupW = (pitch: number) => Math.max(front ? (front - 1) * pitch + slot : 0, back ? (back - 1) * pitch + pitch / 2 + slot : 0);
     let extra = Math.max(0, room - groupW(slot));
     const lounge = Math.min(extra * 0.06, 6 * U); // added to each of the lounge's three gaps
     extra -= 3 * lounge;
@@ -199,7 +245,7 @@ export default class Office extends View {
     const zoneX = coolerX + w("cooler") + 6 * U + lounge; // the counter
     const x0 = zoneX + w("counter") + 8 * U + extra / 2;
     const desksW = groupW(pitch);
-    const deskPos = (i) => i < FRONT_ROW
+    const deskPos = (i: number) => i < FRONT_ROW
       ? { x: x0 + i * pitch, y: floorY, back: false }
       : { x: x0 + (i - FRONT_ROW) * pitch + pitch / 2, y: floorY - 10 * U, back: true };
     return {
@@ -216,7 +262,7 @@ export default class Office extends View {
     const g = this.g;
     if (!g) return false;
     const c = this.cat, age = Date.now() - c.since;
-    if (c.goal === "sleep" && this.away.includes(c.desk) && age < 60000) return false;
+    if (c.goal === "sleep" && this.away.includes(c.desk!) && age < 60000) return false;
     if (c.goal === "perch" && age < 30000) return false;
     const r = Math.random(), perches = (this.catShelves ?? []).length;
     if (this.away.length && r < 0.35) {
@@ -230,18 +276,18 @@ export default class Office extends View {
     return true;
   }
 
-  render(cx) {
+  render(cx: Context) {
     if (!this.ticking) { this.ticking = true; cx.timer.after(frameTick(TICK), (cx) => { this.ticking = false; cx.notify(); }); }
     const { width: W, height: H } = this.size;
     const list = agents().filter((a) => { const ts = terminals(); const p = ts.find((k) => k.address === a.address)?.parent; return !ts.some((k) => k.address === p && k.state === "live"); });
-    const all = terminals();
+    const all: Term[] = terminals();
     const now = Date.now();
     const allFakes = Debug.fakes(this.debug, now);
     setPresent([...list, ...allFakes].map((a) => a.address));
     const fakes = allFakes.filter((f) => !f.remote);
     // Agents on other machines are working from home: they're on the video call.
-    const here = [...list.filter((a) => !remote(a.address)), ...fakes];
-    const callers = [...list.filter((a) => remote(a.address)), ...allFakes.filter((f) => f.remote)];
+    const here: Coworker[] = [...list.filter((a) => !remote(a.address)), ...fakes];
+    const callers: Coworker[] = [...list.filter((a) => remote(a.address)), ...allFakes.filter((f) => f.remote)];
     // Fake coworkers' sub-agents, shaped like terminals.
     all.push(...Debug.fakeKids(this.debug));
     this.live = new Set(all.filter((k) => k.state === "live").map((k) => k.address));
@@ -264,11 +310,11 @@ export default class Office extends View {
       if (f.status === "blocked") this.blockedSince[f.address] = f.action === "alarm" ? 0 : now;
       else delete this.blockedSince[f.address];
     }
-    const byDesk = {};
+    const byDesk: Record<number, Coworker> = {};
     for (const a of here) byDesk[this.desk[a.address]] = a;
-    const tabs = {};
+    const tabs: Record<string, TabInfo> = {};
     for (const s of spaces()) for (const t of s.tabs ?? []) tabs[t.id] = t;
-    const branches = {};
+    const branches: Record<string, string | null> = {};
     for (const p of panes()) branches[p.pane] = p.branch;
 
     // The pizza: the courier walks in, leaves it on the counter, and walks out.
@@ -280,26 +326,26 @@ export default class Office extends View {
     // What each idler is doing: chatting at the cooler at first; after NAP_AFTER, her turn on
     // the LOUNGE list (a debug "sleep" coworker always naps). At tea time everyone's at the cake.
     const idle = here.filter((a) => a.status === "idle").sort((a, b) => this.idleSince[a.address] - this.idleSince[b.address]);
-    const doing = (a) => {
+    const doing = (a: Coworker): string => {
       if (pizzaHere) return "pizza";
       if (a.debug && a.action === "sleep") return "nap";
       const long = now - this.idleSince[a.address] - NAP_AFTER;
       return long < 0 ? "chat" : LOUNGE[(Math.floor(long / LOUNGE_FOR) + hash(a.address)) % LOUNGE.length];
     };
     const nappers = idle.filter((a) => doing(a) === "nap").slice(0, COUCH_SEATS);
-    const place = {};
+    const place: Record<string, Place> = {};
     nappers.forEach((a, k) => { place[a.address] = { spot: "couch", x: g.couchX + (k * 10 + 1) * U, y: g.floorY, face: 1 }; });
     // The rest gather around the cooler (chatting or drinking) or the counter (a snack, or the
     // cake), alternating sides, further out each pair.
     const cooler = { left: g.coolerX - (PERSON - 2) * U, right: g.coolerX + S.artW("cooler", U) - 2 * U };
     const bar = { left: g.zoneX - 6 * U, right: g.zoneX + S.artW("counter", U) - 6 * U };
-    const gather = (list, hub, spotOf) => list.forEach((a, k) => {
+    const gather = (list: Coworker[], hub: { left: number; right: number }, spotOf: (a: Coworker) => string) => list.forEach((a, k) => {
       const left = k % 2 === 0;
       const ring = Math.floor(k / 2) * 9 * U;
       place[a.address] = { spot: spotOf(a), x: left ? hub.left - ring : hub.right + ring, y: g.floorY, face: left ? 1 : -1 };
     });
     const rest = idle.filter((a) => !nappers.includes(a));
-    const atCounter = (a) => ["pizza", "snack"].includes(doing(a));
+    const atCounter = (a: Coworker) => ["pizza", "snack"].includes(doing(a));
     gather(rest.filter((a) => !atCounter(a)), cooler, (a) => (doing(a) === "water" ? "water" : "cooler"));
     gather(rest.filter(atCounter), bar, doing);
     for (const a of here) {
@@ -307,7 +353,7 @@ export default class Office extends View {
       place[a.address] ??= { spot: "desk", x: d.x, y: d.y, face: 1 };
     }
     this.away = here.filter((a) => place[a.address].spot !== "desk").map((a) => this.desk[a.address]);
-    if (this.cat.goal === "sleep" && !this.away.includes(this.cat.desk)) this.wanderCat();
+    if (this.cat.goal === "sleep" && !this.away.includes(this.cat.desk!)) this.wanderCat();
 
     const alarmed = here.filter((a) => a.status === "blocked" && now - (this.blockedSince[a.address] ?? now) > ALARM_AFTER);
     const people = here.map((a) => {
@@ -315,16 +361,16 @@ export default class Office extends View {
       const at = this.walk(a.address, p.spot, p.x, p.y, WALK_SPEED, cx, this.started ? g.door : null);
       // Typing at the desk: drawn between the chair and the desk front.
       const seated = p.spot === "desk" && a.status === "working" && now >= at.until;
-      return { y: p.y, seated, el: this.person(a, at, g, p.face, tabs[a.tab], alarmed.includes(a)) };
+      return { y: p.y, seated, el: this.person(a, at, g, p.face, tabs[a.tab!], alarmed.includes(a)) };
     });
-    const row = (back, seated) => people.filter((p) => (p.y < g.floorY) === back && p.seated === seated).map((p) => p.el);
+    const row = (back: boolean, seated: boolean) => people.filter((p) => (p.y < g.floorY) === back && p.seated === seated).map((p) => p.el);
     const desks = Array.from({ length: deskCount }, (_, i) => {
       const pos = g.deskPos(i);
       const a = byDesk[i];
       return { back: pos.back, chair: S.art("chair", pos.x + S.DESK.chair * U, pos.y, U),
         el: this.deskAt(i, pos, g, a, Boolean(a) && alarmed.includes(a)) };
     });
-    const deskRow = (back) => desks.filter((d) => d.back === back);
+    const deskRow = (back: boolean) => desks.filter((d) => d.back === back);
 
     const hour = this.debug.hour ?? this.now.getHours(); // the debug panel can force the time of day
     const hovered = here.find((a) => a.address === this.hovered);
@@ -336,7 +382,7 @@ export default class Office extends View {
       // put for RESIZE_SETTLE ms: every new size means new scales for every picture (and the
       // girls' frames loading again), which made dragging jerky.
       .on_size_change((size, cx) => {
-        const z = settings().zoom || 1;
+        const z = (settings().zoom as number) || 1;
         const next = { width: size.width / z, height: size.height / z };
         if (next.width === W && next.height === H) { this.nextSize = null; return; }
         const first = !this.sized;
@@ -345,7 +391,7 @@ export default class Office extends View {
         this.nextSize = next;
         this.resizedAt = Date.now();
         cx.timer.after(RESIZE_SETTLE, (cx) => {
-          if (!this.nextSize || Date.now() - this.resizedAt < RESIZE_SETTLE - 10) return;
+          if (!this.nextSize || Date.now() - this.resizedAt! < RESIZE_SETTLE - 10) return;
           this.size = this.nextSize;
           this.nextSize = null;
           cx.notify();
@@ -367,7 +413,7 @@ export default class Office extends View {
         this.kitty(g, cx),
         ...(lightsDown(hour) ? this.night(W, H, g, byDesk, deskCount, alarmed) : []),
         ...(this.waterTime(now) ? [this.water(g)] : []),
-        ...(hovered && this.at[hovered.address] ? [this.thought(hovered, this.at[hovered.address], g, branches[hovered.pane])] : []),
+        ...(hovered && this.at[hovered.address] ? [this.thought(hovered, this.at[hovered.address], g, branches[hovered.pane!])] : []),
         ...(here.length ? [] : [this.sign(W, g)]),
         ...Debug.panel(this.debug, W, H, Boolean(this.party)),
       ]);
@@ -375,11 +421,11 @@ export default class Office extends View {
 
   // Along the wall, clear of the door and the kitchen: a window every third spot, the clock
   // halfway between the first two, and the remote call (when there is one) after the second.
-  wall(W, g, sk, list, callers, all, now) {
+  wall(W: number, g: Geometry, sk: S.Sky, list: Coworker[], callers: Coworker[], all: Term[], now: number) {
     const { U, wallBottom, zoneX } = g;
     const top = 8 * U;
-    const els = [];
-    const remotes = callers.map((a) => ({
+    const els: NativeElement[] = [];
+    const remotes: S.Remote[] = callers.map((a) => ({
       address: a.address, pane: a.debug ? null : a.pane, machine: a.debug ? "debug" : a.address.split("/")[0],
       name: a.space_name, status: a.status, title: a.title || a.tab_name || a.space_name,
     }));
@@ -391,15 +437,15 @@ export default class Office extends View {
     const winW = S.artW("window", U), boardW = 44 * U;
     const calls = Math.min(3, remotes.length);
     const real = list.filter((a) => !a.debug);
-    const count = (st) => real.filter((a) => a.status === st).length;
+    const count = (st: string) => real.filter((a) => a.status === st).length;
     const napping = real.filter((a) => this.at[a.address]?.spot === "couch").length;
     const interns = real.reduce((n, a) => n + descendants(all, a.address).length, 0);
-    const items = [
+    const items: WallItem[] = [
       { w: winW, window: true },
-      { w: S.artW("calendar", cU), draw: (x) => S.calendar(x, clockY, cU, this.now, t("months")[this.now.getMonth()], t("weekdays")[this.now.getDay()]) },
-      { w: S.artW("clock", cU), draw: (x) => S.clock(x, clockY, cU, this.now) },
+      { w: S.artW("calendar", cU), draw: (x: number) => S.calendar(x, clockY, cU, this.now, t("months")[this.now.getMonth()], t("weekdays")[this.now.getDay()]) },
+      { w: S.artW("clock", cU), draw: (x: number) => S.clock(x, clockY, cU, this.now) },
       { w: winW, window: true },
-      { w: boardW, draw: (x) => S.board(x, top + 6 * U, U, [
+      { w: boardW, draw: (x: number) => S.board(x, top + 6 * U, U, [
         [STATUS.working, t("board.working"), count("working")],
         [STATUS.done, t("board.done"), count("done")],
         [STATUS.blocked, t("board.blocked"), count("blocked")],
@@ -408,29 +454,29 @@ export default class Office extends View {
         ["#79c9ad", t("board.interns"), interns, interns > 0],
         ["#f28daa", t("board.pizza"), "🍰", Boolean(this.party)],
       ]) },
-      ...(calls ? [{ w: calls * 13 * U + (calls - 1) * U + 2 * U, draw: (x) => S.videoWall(x, top, U, remotes) }] : []),
+      ...(calls ? [{ w: calls * 13 * U + (calls - 1) * U + 2 * U, draw: (x: number) => S.videoWall(x, top, U, remotes) }] : []),
     ];
     const from = g.doorX + S.artW("door", U) + 4 * U, to = g.shelfX - 4 * U;
-    const gapOf = (list) => (to - from - list.reduce((n, it) => n + it.w, 0)) / (list.length + 1);
+    const gapOf = (list: WallItem[]) => (to - from - list.reduce((n, it) => n + it.w, 0)) / (list.length + 1);
     while (gapOf([...items, { w: winW }]) >= WALL_GAP * U) items.push({ w: winW, window: true });
     const gap = Math.max(2 * U, gapOf(items));
     let x = from + gap;
     for (const it of items) { it.x = x; x += it.w + gap; }
     // One sun (or moon) for the whole view, in the second window.
     const wins = items.filter((it) => it.window);
-    const sunX = (wins[1] ?? wins[0]).x + 17 * U;
-    for (const it of items) els.push(it.window ? S.window_(it.x, top, U, sk, sunX) : it.draw(it.x));
+    const sunX = (wins[1] ?? wins[0]).x! + 17 * U;
+    for (const it of items) els.push(it.window ? S.window_(it.x!, top, U, sk, sunX) : it.draw!(it.x!));
     // Three cat shelves, in the gaps between them when there's room: the first gap (by the
     // door), the middle one and the last (by the bookshelf), the middle one higher. `y`: the
     // plank's top, where her feet go.
     const shelfW = S.artW("catshelf", U);
     this.catShelves = [];
     if (gap >= shelfW + 4 * U) {
-      const starts = [from, ...items.map((it) => it.x + it.w)];
+      const starts = [from, ...items.map((it) => it.x! + it.w)];
       const picks = [...new Set([0, Math.round((starts.length - 1) / 2), starts.length - 1])];
       picks.map((i) => starts[i]).forEach((x0, i) => {
         const y = top + (i === 1 ? 14 : 20) * U; // above the girls' heads
-        this.catShelves.push({ x: x0 + (gap - shelfW) / 2, y: y + 0.6 * U });
+        this.catShelves!.push({ x: x0 + (gap - shelfW) / 2, y: y + 0.6 * U });
         els.push(S.art("catshelf", x0 + (gap - shelfW) / 2, y + S.ART.catshelf.h * U, U));
       });
     }
@@ -438,7 +484,7 @@ export default class Office extends View {
     return els;
   }
 
-  props(g, pizzaHere) {
+  props(g: Geometry, pizzaHere: boolean | null) {
     const { U, floorY, zoneX } = g;
     return [
       S.art("counter", zoneX, floorY, U),
@@ -452,18 +498,18 @@ export default class Office extends View {
 
   // The water reminder: for the first few minutes of every hour (or from the debug panel).
   // "I drank it!" hides it until the next one (kept in localStorage, so a restart remembers).
-  waterTime(now) {
+  waterTime(now: number) {
     let drank = 0;
     try { drank = Number(localStorage.getItem(WATER_KEY)) || 0; } catch {}
     const d = new Date(now);
     const hourly = d.getMinutes() % WATER_EVERY < WATER_FOR && drank < now - d.getMinutes() * 60000 - d.getSeconds() * 1000;
-    const forced = now - (this.debug.water ?? 0) < WATER_FOR * 60000 && drank < this.debug.water;
+    const forced = now - (this.debug.water ?? 0) < WATER_FOR * 60000 && drank < this.debug.water!;
     return hourly || forced;
   }
 
-  water(g) {
+  water(g: Geometry) {
     const U = g.U;
-    const drank = (_e, cx) => { try { localStorage.setItem(WATER_KEY, String(Date.now())); } catch {} cx.notify(); };
+    const drank = (_e: ClickEvent, cx: Context) => { try { localStorage.setItem(WATER_KEY, String(Date.now())); } catch {} cx.notify(); };
     return div().absolute().left(g.coolerX - 10 * U).top(g.floorY - 34 * U).px(8).py(4).gap(8).rounded(10).flex().items_center()
       .bg("#eaf6ff").border_2().border_color("#7fb6ff").text_size(Math.max(10, 2.6 * U)).font_bold().text_color("#3b6fb0")
       .whitespace_nowrap().loop("top", { from: g.floorY - 34 * U, to: g.floorY - 35.5 * U, period: 1400 })
@@ -472,25 +518,25 @@ export default class Office extends View {
         .hover((s) => s.opacity(0.85)).on_click(drank).child(t("waterDone")));
   }
 
-  sign(W, g) {
+  sign(W: number, g: Geometry) {
     return div().absolute().left(W / 2 - 150).top(g.wallBottom - 30).w(300).py(4).rounded(10).bg("#7a617844")
       .text_size(11).text_color("#fffaf3").flex().justify_center().child(t("empty"));
   }
 
   // A desk front with its monitor, her desk things (a lamp on an empty desk), and the name tag
   // of whoever sits there under it. The chair is drawn separately, behind the doll.
-  deskAt(i, pos, g, a, alarmed) {
+  deskAt(i: number, pos: { x: number; y: number; back: boolean }, g: Geometry, a: Coworker | undefined, alarmed: boolean) {
     const U = g.U;
     const st = a?.status;
-    const away = Boolean(a) && this.at[a.address]?.spot !== "desk";
+    const away = Boolean(a) && this.at[a!.address]?.spot !== "desk";
     const H = 34 * U; // the desk's box: from 34 units above the floor down to the floor
-    const y = (h) => H - h * U; // px from the box top, for a height above the floor
+    const y = (h: number) => H - h * U; // px from the box top, for a height above the floor
     const deskTop = 12.6;
-    const at = (id, x, h) => S.art(id, x * U, y(h), U);
+    const at = (id: string, x: number, h: number) => S.art(id, x * U, y(h), U);
     const [sx, sy, sw, sh] = S.DESK.screen;
     const monTop = y(deskTop + 13);
     return div().id(`desk-${i}`).absolute().left(pos.x).top(pos.y - H).w(S.SLOT * U).h(H + 28)
-      .when(Boolean(a) && !a.debug, (el) => el.cursor_pointer().on_click(() => run("pane.focus", { pane: a.pane })))
+      .when(Boolean(a) && !a!.debug, (el) => el.cursor_pointer().on_click(() => run("pane.focus", { pane: a!.pane })))
       .children([
         this.screen(away ? "idle" : st, !a || away, U, `d${i}`, alarmed).absolute().left(sx * U).top(monTop + sy * U).w(sw * U).h(sh * U),
         at("monitor", S.DESK.monitor, deskTop),
@@ -501,8 +547,8 @@ export default class Office extends View {
   }
 
   // A desk's screen. `key` keeps each screen's lines apart (their ids must be unique).
-  screen(st, screensaver, U, key, alarmed = false) {
-    return div().overflow_hidden().rounded(U * 0.6).bg(SCREEN[st] ?? SCREEN.idle)
+  screen(st: string | undefined, screensaver: boolean, U: number, key: string, alarmed = false) {
+    return div().overflow_hidden().rounded(U * 0.6).bg(SCREEN[st!] ?? SCREEN.idle)
       .when(st === "working", (el) => el.child(this.terminal(U, key)))
       // A face on the screen; a loop on the screen itself would make it see-through, so the
       // pink flash is a layer of its own.
@@ -511,7 +557,7 @@ export default class Office extends View {
         .child(div().text_color(alarmed ? "#ffffff" : "#ff8a9a").frames(alarmed ? CRYING : PUZZLED, alarmed ? 450 : 900)))
       .when(st === "done", (el) => el.flex().items_center().justify_center().text_size(Math.max(9, 2.6 * U)).font_bold().text_color("#ffe08a")
         .child(div().frames(HAPPY, 600))
-        .children([[1, 1, "♡"], [8.2, 4.6, "♡"], [8.6, 0.8, "✦"]].map(([hx, hy, c], k) => div().absolute().left(hx * U).top(hy * U)
+        .children(([[1, 1, "♡"], [8.2, 4.6, "♡"], [8.6, 0.8, "✦"]] as [number, number, string][]).map(([hx, hy, c], k) => div().absolute().left(hx * U).top(hy * U)
           .text_size(Math.max(7, 1.8 * U)).text_color("#ffb3c9").child(c).loop("opacity", { from: 0.2, to: 1, period: 700 + k * 230 }))))
       .when(screensaver && st !== "blocked" && st !== "done", (el) => el.child(div().absolute().top(U * 2.6).text_size(Math.max(9, 2.6 * U))
         .text_color("#ffb3c9").child("♡").loop("left", { from: U, to: U * 7.5, period: 5000 })));
@@ -520,14 +566,14 @@ export default class Office extends View {
   // Working: a terminal filling up. Four lines from the left edge, random lengths; the bottom
   // one types itself out left to right, then everything scrolls up a line and a new one
   // starts. Lines keep their ids so the scroll and the typing are native transitions.
-  terminal(U, key) {
+  terminal(U: number, key: string) {
     const salt = hash(key);
     const period = TERM_LINE + (salt % 250); // ms per line, a little different on each desk
     const t = Date.now() + salt;
     const n = Math.floor(t / period); // the line being typed
     const fresh = t % period < TERM_FRESH; // just started: draw it empty, then let it grow
     const lineH = 1.5 * U, maxW = 8.6 * U;
-    const lines = [];
+    const lines: NativeElement[] = [];
     for (let j = n - 4; j <= n; j++) {
       const r = hash(`${key}:${j}`);
       const w = j === n && fresh ? 0 : maxW * (0.3 + (r % 1000) / 1000 * 0.7);
@@ -540,24 +586,24 @@ export default class Office extends View {
   }
 
   // The space's colour, as in the sidebar (Herdr shares the colours, not the icons).
-  spaceTile(id) {
-    const c = (shared("space.colors") ?? {})[id] ?? "ansi6";
-    return div().size(12).flex_none().rounded(3).bg(c.startsWith("#") ? c : MARK[c] ?? "#22a99a");
+  spaceTile(id: string) {
+    const c = ((shared("space.colors") ?? {}) as Record<string, string>)[id] ?? "ansi6";
+    return div().size(12).flex_none().rounded(3).bg(c.startsWith("#") ? c as Color : MARK[c] ?? "#22a99a");
   }
 
   // Her name tag, under the desk (over it in the back row). Flashes pink when she's been stuck
   // too long.
-  plate(a, U, alarmed) {
+  plate(a: Coworker, U: number, alarmed: boolean) {
     const focused = a.focused;
     return div().max_w((S.SLOT - 8) * U).h(16).px(5).gap(4).rounded(8).flex().items_center()
       .bg(focused ? "#fffaf3" : "#7a617855").text_size(10).text_color(focused ? "#7a6178" : "#fffaf3")
       .when(alarmed, (el) => el.bg("#ff6b88").loop("opacity", { from: 0.55, to: 1, period: 450 }))
-      .when(!a.debug, (el) => el.child(this.spaceTile(a.space)))
+      .when(!a.debug, (el) => el.child(this.spaceTile(a.space!)))
       .child(div().truncate().child(a.space_name + (a.tab_name ? ` · ${a.tab_name}` : "")));
   }
 
   // Sub-agents: small dolls on stools in front of their parent's desk, laptops on their laps.
-  interns(a, kids, g) {
+  interns(a: Coworker, kids: Term[], g: Geometry) {
     if (!kids.length) return [];
     const U = g.U;
     const p = U * 0.62;
@@ -585,7 +631,7 @@ export default class Office extends View {
   }
 
   // Interns that finished: a bow where they sat, then out the door.
-  graduates(g, now, cx) {
+  graduates(g: Geometry, now: number, cx: Context) {
     const live = this.live;
     for (const [k, info] of Object.entries(this.kids)) {
       if (live.has(k)) continue;
@@ -595,7 +641,7 @@ export default class Office extends View {
       cx.timer.after(GRAD_BOW + 20, (cx) => cx.notify());
     }
     return Object.entries(this.grads).flatMap(([k, gr]) => {
-      const box = (el, x, y) => div().id(`grad-${k}`).absolute().left(x).top(y - BOX * gr.p).w(PERSON * gr.p).h(BOX * gr.p).child(el);
+      const box = (el: NativeElement, x: number, y: number) => div().id(`grad-${k}`).absolute().left(x).top(y - BOX * gr.p).w(PERSON * gr.p).h(BOX * gr.p).child(el);
       if (now < gr.start + GRAD_BOW)
         return [box(dollSprite(k, "cheer", -1, gr.p, hash(k)), gr.x, gr.y).child(this.bubble(-8, "#7a6178", gr.p).child(t("thanks")))];
       const at = this.walk(`grad:${k}`, "door", g.door.x, g.door.y, WALK_SPEED, cx, { x: gr.x, y: gr.y });
@@ -606,7 +652,7 @@ export default class Office extends View {
   }
 
   // A walking doll carrying something (`thing`: an ART id held at the chest).
-  carrier(address, face, U, thing) {
+  carrier(address: string, face: number, U: number, thing: string) {
     const a = S.ART[thing];
     const x = face < 0 ? (PERSON / 2 - 4 - a.w / 2) * U : (PERSON / 2 + 4 - a.w / 2) * U;
     return div().absolute().size_full().children([
@@ -616,7 +662,7 @@ export default class Office extends View {
   }
 
   // Closed agents carrying their box out.
-  leavers(g, now) {
+  leavers(g: Geometry, now: number) {
     return Object.keys(this.leaving).flatMap((k) => {
       const at = this.at[`leave:${k}`];
       if (!at || now >= at.until + 150) { delete this.leaving[k]; delete this.at[`leave:${k}`]; return []; }
@@ -626,7 +672,7 @@ export default class Office extends View {
     });
   }
 
-  courier(party, counter, trip, g, now, cx) {
+  courier(party: Party, counter: Point, trip: number, g: Geometry, now: number, cx: Context) {
     const stay = 2500;
     const leaving = now >= party.start + trip + stay;
     if (now >= party.start + 2 * trip + stay + 100) return div();
@@ -643,7 +689,7 @@ export default class Office extends View {
       .child(body).when(!walking, (el) => el.child(this.bubble(-6, "#f28daa", g.U).child(t("pizzaHere"))));
   }
 
-  person(a, at, g, placeFace, tab, alarmed) {
+  person(a: Coworker, at: At, g: Geometry, placeFace: number, tab: TabInfo | undefined, alarmed: boolean) {
     const U = g.U;
     const napping = at.spot === "couch";
     const walking = Date.now() < at.until;
@@ -651,11 +697,11 @@ export default class Office extends View {
     at.face = face;
     const st = a.status;
     const salt = hash(a.address);
-    const doll = (name, f = 1, x = 8) => dollSprite(a.address, name, f, U, salt, x);
-    const wrap = (el, bob) => div().absolute().size_full().child(el).when(Boolean(bob), (d) => d.loop("top", bob));
-    let body;
+    const doll = (name: string, f = 1, x = 8) => dollSprite(a.address, name, f, U, salt, x);
+    const wrap = (el: NativeElement, bob: { from: number; to: number; period: number }) => div().absolute().size_full().child(el).when(Boolean(bob), (d) => d.loop("top", bob));
+    let body: NativeElement;
     if (walking) body = doll("walk", face);
-    else if (["cooler", "water", "pizza", "snack"].includes(at.spot)) body = doll("idle", face);
+    else if (["cooler", "water", "pizza", "snack"].includes(at.spot!)) body = doll("idle", face);
     else if (napping) body = doll("sleep");
     else if (st === "working") body = doll("typing", 1, 10); else if (alarmed) body = wrap(doll("blocked"), { from: 0, to: -4, period: 420 });
     else if (st === "done") body = doll("cheer");
@@ -663,7 +709,7 @@ export default class Office extends View {
 
     const top = -2 * U;
     const n = salt % 997;
-    let bubble = null;
+    let bubble: NativeElement | null = null;
     if (walking) bubble = null;
     else if (at.spot === "pizza") bubble = this.bubble(top, "#f28daa", U).frames(rotate(t("pizzaChat"), n % t("pizzaChat").length), 1800 + (n % 900));
     else if (at.spot === "snack") bubble = this.bubble(top, "#f28daa", U).frames(rotate(t("snack"), n % t("snack").length), 2000 + (n % 1200));
@@ -687,7 +733,7 @@ export default class Office extends View {
   }
 
   // What they're working on, in a thought cloud over their head, with the git branch.
-  thought(a, at, g, branch) {
+  thought(a: Coworker, at: At, g: Geometry, branch: string | null | undefined) {
     const U = g.U;
     const text = (a.title || a.tab_name || a.program?.name || t("thinking")).replace(/\s+/g, " ").trim();
     const x = at.x + 8 * U;
@@ -700,23 +746,23 @@ export default class Office extends View {
       .child(div().absolute().left(22).top(35).size(4).rounded_full().bg("#ffffff").border_1().border_color(S.INK));
   }
 
-  kitty(g, cx) {
+  kitty(g: Geometry, cx: Context) {
     const U = g.U;
     const c = this.cat;
     const onDesk = c.goal === "sleep";
-    const pos = onDesk ? g.deskPos(c.desk) : null;
+    const pos = onDesk ? g.deskPos(c.desk!) : null;
     // A perch: a cat shelf on the wall, or (-1, or a shelf that's gone after a resize) the top
     // of the bookshelf.
-    const shelf = c.goal === "perch" ? (this.catShelves ?? [])[c.perch] : null;
+    const shelf = c.goal === "perch" ? (this.catShelves ?? [])[c.perch!] : null;
     const napping = onDesk || (c.goal === "perch" && c.nap);
     const onBooks = c.goal === "perch" && !shelf;
-    const x = onDesk ? pos.x + 12 * U : shelf ? shelf.x : onBooks ? g.shelfX : (c.x ?? g.couchX - 12 * U);
-    const y = onDesk ? pos.y - 12.6 * U : shelf ? shelf.y : onBooks ? g.floorY - S.ART.bookshelf.h * U : g.floorY;
+    const x = onDesk ? pos!.x + 12 * U : shelf ? shelf.x : onBooks ? g.shelfX : (c.x ?? g.couchX - 12 * U);
+    const y = onDesk ? pos!.y - 12.6 * U : shelf ? shelf.y : onBooks ? g.floorY - S.ART.bookshelf.h * U : g.floorY;
     // She doesn't fly: off a desk she hops straight down first, then walks along the floor to
     // under the next spot, then hops straight up. One leg at a time; the next starts when it ends.
     const key = `${c.goal}-${c.desk}-${c.since}`;
-    const cur = this.at.cat, near = (a, b) => Math.abs(a - b) < 0.5 * U;
-    let leg = { x, y, spot: key };
+    const cur = this.at.cat, near = (a: number, b: number) => Math.abs(a - b) < 0.5 * U;
+    let leg: { x: number; y: number; spot: string | null } = { x, y, spot: key };
     if (cur && !(cur.spot?.startsWith(key) && Date.now() < cur.until)) {
       if (!near(cur.x, x) && !near(cur.y, g.floorY)) leg = { x: cur.x, y: g.floorY, spot: `${key}-down` };
       else if (!near(cur.x, x) && !near(y, g.floorY)) leg = { x, y: g.floorY, spot: `${key}-under` };
@@ -732,14 +778,14 @@ export default class Office extends View {
     const cU = U * CAT_SIZE, h = S.ART[id].h * cU, inset = S.CAT_W * (U - cU) / 2;
     return div().id("cat").absolute().left(at.x + inset).top(at.y - h).w(S.CAT_W * cU).h(h)
       .transition("left", { duration: at.dur, easing: "linear" })
-      .transition("top", { duration: at.dur, easing: hopping ? (at.y < at.fromY ? "ease-out" : "ease-in") : "linear" })
+      .transition("top", { duration: at.dur, easing: hopping ? (at.y < at.fromY! ? "ease-out" : "ease-in") : "linear" })
       .child(S.art(id, 0, h, cU, undefined, face < 0))
       .when(napping && !walking, (el) => el.child(div().absolute().left(10 * cU).top(-2 * cU).text_size(Math.max(8, 2.4 * cU)).font_bold()
         .text_color("#a993dc").frames(["z", "zz", "zzz", ""], 800)));
   }
 
   // After dark: the room dims and busy screens glow.
-  night(W, H, g, byDesk, deskCount, alarmed) {
+  night(W: number, H: number, g: Geometry, byDesk: Record<number, Coworker>, deskCount: number, alarmed: Coworker[]) {
     const U = g.U;
     const els = [div().absolute().left(0).top(0).w(W).h(H).bg("#2a2350").opacity(0.42 * S.nightDim())]; // less in a dark scene
     const [sx, sy, sw, sh] = S.DESK.screen;
@@ -757,7 +803,7 @@ export default class Office extends View {
     return els;
   }
 
-  bubble(top, color, U = 3) {
+  bubble(top: number, color: Color, U = 3) {
     return div().absolute().left((PERSON * U) / 2 - 4).top(top).px(6).h(16).flex().items_center().rounded(8)
       .bg("#fffaf3").border_1().border_color(S.INK).text_size(10).font_bold().text_color(color).whitespace_nowrap();
   }

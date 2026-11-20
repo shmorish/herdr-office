@@ -51,7 +51,12 @@ const T = {
   "time.22": "時間：夜",
 };
 
-// `key` の言葉（文字列、または会話のように候補のリスト）。
-export function t(key) {
-  return T[key] ?? key;
+// 候補のリストになっている言葉（会話、月、曜日など）の key。
+type ListKey = { [K in keyof typeof T]: (typeof T)[K] extends string[] ? K : never }[keyof typeof T];
+
+// `key` の言葉（文字列、または会話のように候補のリスト）。無い key はそのまま返す。
+export function t(key: ListKey): string[];
+export function t(key: string): string;
+export function t(key: string): string | string[] {
+  return (T as Record<string, string | string[]>)[key] ?? key;
 }
