@@ -6,7 +6,7 @@
 // arrives for tea time. A cat lives here. Lights go down after dark.
 // Hover anyone to see what they're working on; click them to go to their terminal.
 import { View, div } from "gpui-kit";
-import { agents, terminals, spaces, panes, shared, run, setAgentOrder, settings } from "herdr";
+import { agents, terminals, spaces, panes, shared, run, setAgentOrder, settings, props as layoutProps } from "herdr";
 import { dollSprite, warmup, frameTick, hash, castOf, setPresent, BOX, PERSON } from "./doll.js";
 import * as S from "./scene.js";
 import * as Debug from "./debug.js";
@@ -64,7 +64,9 @@ const descendants = (all, addr) =>
   all.filter((k) => k.parent === addr && k.state === "live").flatMap((k) => [k, ...descendants(all, k.address)]);
 
 export default class Office extends View {
-  init(props, cx) {
+  init(_props, cx) {
+    // The block's props from the layout come from herdr's props(), not init's argument.
+    const props = layoutProps();
     this.lang = props?.lang; // the layout's language: "en" (default), "zh-TW" or "ja"
     this.scene = props?.scene; // the layout's scene: "pastel" (default) or "jirai"
     this.size = { width: 1400, height: 220 };
