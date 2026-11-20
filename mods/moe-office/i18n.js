@@ -66,6 +66,7 @@ const T = {
   "scene.pastel": { en: "Pastel office", "zh-TW": "粉彩辦公室", ja: "パステルオフィス" },
   "scene.jirai": { en: "Jirai-kei", "zh-TW": "地雷系", ja: "地雷系" },
   "scene.gothic": { en: "Gothic lolita (dark)", "zh-TW": "哥德蘿莉（深色）", ja: "ゴスロリ（ダーク）" },
+  "scene.ocean": { en: "Ocean (dark)", "zh-TW": "海洋（深色）", ja: "オーシャン（ダーク）" },
   "debug.title": { en: "Debug: fake coworkers", "zh-TW": "Debug：假角色", ja: "Debug：ダミーの同僚" },
   "debug.char": { en: "Girl", "zh-TW": "角色", ja: "キャラ" },
   "debug.hair": { en: "Hair", "zh-TW": "髮色", ja: "髪色" },

@@ -2,8 +2,8 @@
 
 Usage: scene_art.py <mod>/scene            (every theme)
        scene_art.py <mod>/scene <theme>    (one theme)
-Themes (THEMES below): "pastel", the pastel office, and "jirai", pink and black with lace
-and ribbons. Every theme draws the same pieces at the same sizes, so the room's layout
+Themes (THEMES below): "pastel", the pastel office, "jirai", pink and black with lace
+and ribbons, "gothic", and "ocean", a night-blue room. Every theme draws the same pieces at the same sizes, so the room's layout
 doesn't change; only the colours and the trimmings do.
 
 Every asset is drawn in scene units (1 unit = U px at runtime) with the floor (or the
@@ -37,6 +37,13 @@ THEMES = {
         SKY=("#6a5a8c", "#9a8ac0"), BUTTER=("#e4dfeb", "#b8afc6"), PEACH=("#3a2b48", "#2c2036"),
         WOOD=("#6a5478", "#2c2036"), WALL="#241b2d", SCREEN="#140d18", SCREEN2="#2c2036", CURTAIN="#6e2340",
         LACE=("#ece4f2", "#56406a"), RAIL_LACE="#ece4f2"),
+    # Ocean, for a navy and cyan Herdr layout: a night-blue room, the furniture in steel and
+    # sea blue, cyan bunting; the orange cat, the cake and the sky keep their colours.
+    "ocean": dict(
+        INK="#0a1622", CREAM=("#dbe7f3", "#2a4560"), PINK=("#9ad9f0", "#7dcfff", "#4fb3d9"),
+        LAV=("#1e3a57", "#5b8fc2", "#3d6d9e"), MINT=("#2d6b73", "#5fd4c4", "#79c9ad"),
+        SKY=("#d6ecff", "#a9d3f5"), BUTTER=("#fff0b8", "#ffd977"), PEACH=("#ffe0cc", "#ffc2a1"),
+        WOOD=("#16263a", "#24405c"), WALL="#13243a", SCREEN="#0d1b2a", SCREEN2="#2c4560", CURTAIN="#9ad9f0"),
 }
 
 if len(sys.argv) < 3:  # every theme, each in its own run
@@ -536,6 +543,7 @@ CAT, CAT2, CAT3, BELLY = {
     "pastel": ("#ffb15c", "#f08a3c", "#ffd29a", "#fff4e4"),
     "jirai": ("#fffafc", "#f6a9c2", "#ffe3ec", "#ffffff"),
     "gothic": ("#cfc6dc", "#8f80a8", "#e4dfeb", "#f2eef6"),
+    "ocean": ("#ffb15c", "#f08a3c", "#ffd29a", "#fff4e4"),
 }[THEME]
 def cat_head(x, y):
     return "".join([

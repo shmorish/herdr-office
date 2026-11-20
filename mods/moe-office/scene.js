@@ -15,6 +15,9 @@ export const THEMES = {
   gothic: { wall: "#241b2d", wain: "#1b1422", wainStripe: "#251c2e", rail: "#56406a", floor: "#2c2236", base: "#120b16", ink: "#160e1a", lace: true, pins: ["#c4506f", "#e4dfeb"], night: 0.5,
     calendar: { head: "#ece4f2", day: "#2c2036", week: "#8c3d5e" },
     board: { bg: "#2c2036", border: "#8c3d5e", text: "#e4dfeb" } },
+  ocean: { wall: "#13243a", wain: "#0f1e31", wainStripe: "#132840", rail: "#2d4f73", floor: "#16263a", base: "#0b1622", ink: "#0a1622", lace: false, pins: ["#7dcfff", "#5fd4c4"], night: 0.5,
+    calendar: { head: "#dbe7f3", day: "#16263a", week: "#4fb3d9" },
+    board: { bg: "#16263a", border: "#4fb3d9", text: "#dbe7f3" } },
   jirai: { wall: "#fff0f5", wain: "#f9d3df", wainStripe: "#f4c2d1", rail: "#2a1f29", floor: "#fbe1ea", base: "#2a1f29", ink: "#3b2433", lace: true, pins: ["#f06b97", "#3b2433"],
     calendar: { head: "#ffc9da", day: "#3b2433", week: "#f06b97" } },
 };
