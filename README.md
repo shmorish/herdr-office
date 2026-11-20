@@ -46,7 +46,7 @@ agent の状態ごとに、その子の動きが変わる。
 1. mod を `~/.config/herdr-app/mods/office` に入れる。
 
    ```sh
-   git clone https://github.com/shmorish/herdr-office.git && cd herdr-office && ./install.sh
+   git clone https://github.com/shmorish/herdr-office.git && cd herdr-office && ./install.sh   # esbuild が要る
    ```
 
    自分の環境では [dotfiles](https://github.com/shmorish/dotfiles) の Home Manager がコミット固定で取ってきて、同じ場所にコピーしている。
@@ -63,11 +63,21 @@ agent の状態ごとに、その子の動きが変わる。
 
 ## 開発
 
+コードは `mods/office/*.ts` に TypeScript で書く。`strict` で null チェックも有効。Herdr が読むのは `.js` だけなので、`build.sh` が esbuild で変換する（キャラクターの `chars/*/char.js` はツールが作るファイルなので JS のまま）。
+
+```sh
+tsc -p .                 # 型チェック（nix shell nixpkgs#typescript か npx -p typescript tsc）
+./build.sh dist/office   # 変換して dist/office に置く
+./install.sh             # 変換して ~/.config/herdr-app/mods/office に置く
+```
+
+PR と main への push で、CI が型チェックと変換を確かめる。Herdr の型定義（Apache-2.0）は `types/` に写してある。
+
 - 部屋の絵（`mods/office/scene/natural/`）は `tools/scene_art.py` で作る。手で編集しない。
 
   ```sh
   rm -rf mods/office/scene && python3 -I tools/scene_art.py mods/office/scene
   ```
 
-- 画面の文言は `mods/office/i18n.js` にまとめてある。
+- 画面の文言は `mods/office/i18n.ts` にまとめてある。
 - 作りの詳細とキャラクターの追加方法は [AGENTS.md](AGENTS.md)（英語）にある。

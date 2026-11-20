@@ -4,16 +4,33 @@
 // localStorage. Fake coworkers are placed like real agents but don't count on the board and
 // can't be clicked through.
 import { div } from "gpui-kit";
+import type { Color, Context, NativeElement } from "gpui-kit";
 import { COLOURS, SWATCH, FIXED, CHARACTERS } from "./doll.js";
+import type { Look } from "./doll.js";
 import { t } from "./i18n.js";
+
+// A fake coworker in the panel.
+export interface FakeDoll { id: number; action: string; look: Look; kids?: number; remote?: boolean }
+// The panel's state, kept in localStorage. Times are Date.now() ms.
+export interface DebugState {
+  open: boolean; debug: boolean; next: number; dolls: FakeDoll[];
+  hour?: number | null; water?: number; party?: number; partyEnd?: number;
+}
+// A fake agent, shaped like herdr's agents (and the fields main.ts reads from them).
+export interface FakeAgent {
+  address: string; debug: true; remote: boolean; status: string; action: string;
+  space_name: string; tab_name: string; title: string;
+}
+// A fake sub-agent, shaped like herdr's terminals.
+export interface FakeKid { address: string; parent: string; state: string; status: string }
 
 const KEY = "office.debug";
 const MAX = 6;
 export const ACTIONS = ["idle", "walk", "typing", "blocked", "alarm", "done", "sleep"];
 
-export function load() {
+export function load(): DebugState {
   try {
-    const d = JSON.parse(localStorage.getItem(KEY));
+    const d = JSON.parse(localStorage.getItem(KEY) as string);
     if (d && Array.isArray(d.dolls)) {
       for (const doll of d.dolls) {
         if (typeof doll.look?.colour !== "number") doll.look = randomLook(); // looks from the paper dolls
@@ -28,56 +45,56 @@ export function load() {
 
 // Debug mode off: no fake coworkers, the real time of day, no forced water reminder (and
 // main.js ends a tea time started from here).
-function clearDebug(d) {
+function clearDebug(d: DebugState) {
   d.dolls = [];
   d.hour = null;
   delete d.water;
 }
 
-export function randomLook() {
+export function randomLook(): Required<Look> {
   return { colour: Math.floor(Math.random() * COLOURS.length), char: Math.floor(Math.random() * CHARACTERS.length) };
 }
 
 // Debug clock: the hour the room pretends it is (null = the real one).
-export const TIMES = [null, 12, 18, 22];
+export const TIMES: (number | null)[] = [null, 12, 18, 22];
 
 // "walk" goes back and forth between the desk and the cooler every 6 s.
-const statusOf = (action, now) =>
+const statusOf = (action: string, now: number) =>
   action === "walk" ? (Math.floor(now / 6000) % 2 ? "working" : "idle")
   : action === "typing" ? "working" : action === "blocked" || action === "alarm" ? "blocked"
   : action === "done" ? "done" : "idle";
 
 // The fake agents, shaped like herdr's agents.
-export function fakes(d, now) {
+export function fakes(d: DebugState, now: number): FakeAgent[] {
   for (const k of Object.keys(FIXED)) if (k.startsWith("debug-")) delete FIXED[k];
   return d.dolls.map((doll) => {
     const address = `debug-${doll.id}`;
     FIXED[address] = doll.look;
     const label = t(`act.${doll.action}`);
-    return { address, debug: true, remote: Boolean(doll.remote), status: statusOf(doll.action, now), action: doll.action,
+    return { address, debug: true as const, remote: Boolean(doll.remote), status: statusOf(doll.action, now), action: doll.action,
       space_name: `Debug ${doll.id}`, tab_name: label, title: `debug · ${label}` };
   });
 }
 
 // The fake coworkers' sub-agents, shaped like herdr's terminals: working, idle, stuck.
 const KID_STATUS = ["working", "idle", "blocked"];
-export function fakeKids(d) {
+export function fakeKids(d: DebugState): FakeKid[] {
   return d.dolls.filter((doll) => !doll.remote).flatMap((doll) => Array.from({ length: doll.kids ?? 0 }, (_, k) => ({
     address: `debug-${doll.id}-sub${k}`, parent: `debug-${doll.id}`, state: "live", status: KID_STATUS[k % KID_STATUS.length],
   })));
 }
 
 // A gear button in the corner opens the panel.
-export function panel(d, W, H, partyOn) {
+export function panel(d: DebugState, W: number, H: number, partyOn: boolean): NativeElement[] {
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch {} };
-  const act = (fn) => (_e, cx) => { fn(); save(); cx.notify(); };
-  const btn = (id, label, fn, bg = "#7a6178") => div().id(id).flex_none().h(16).px(5).rounded(4).flex().items_center()
+  const act = (fn: () => void) => (_e: unknown, cx: Context) => { fn(); save(); cx.notify(); };
+  const btn = (id: string, label: string, fn: () => void, bg: Color = "#7a6178") => div().id(id).flex_none().h(16).px(5).rounded(4).flex().items_center()
     .bg(bg).text_color("#fffaf3").cursor_pointer().hover((s) => s.opacity(0.8)).on_click(act(fn)).child(label);
   const toggle = div().id("debug-toggle").absolute().left(W - 26).top(4).size(20).rounded(6).flex().items_center().justify_center()
     .text_size(12).bg(d.open ? "#7a6178" : "#00000014").cursor_pointer().on_click(act(() => { d.open = !d.open; }))
     .child(d.open ? "✕" : "⚙️");
   if (!d.open) return [toggle];
-  const cycle = (n, v) => (v + 1) % n;
+  const cycle = (n: number, v: number) => (v + 1) % n;
   const rows = d.dolls.map((doll) => {
     const L = doll.look, id = doll.id;
     return div().flex().items_center().gap(3).children([
@@ -85,7 +102,7 @@ export function panel(d, W, H, partyOn) {
       btn(`dbg-act-${id}`, `▶ ${t(`act.${doll.action}`)}`, () => {
         doll.action = ACTIONS[(ACTIONS.indexOf(doll.action) + 1) % ACTIONS.length];
       }, "#5b8def"),
-      btn(`dbg-char-${id}`, `${t("debug.char")} ${(L.char % CHARACTERS.length) + 1}`, () => { L.char = cycle(CHARACTERS.length, L.char); }, "#c27ba0"),
+      btn(`dbg-char-${id}`, `${t("debug.char")} ${(L.char! % CHARACTERS.length) + 1}`, () => { L.char = cycle(CHARACTERS.length, L.char!); }, "#c27ba0"),
       btn(`dbg-colour-${id}`, t("debug.hair"), () => { L.colour = cycle(COLOURS.length, L.colour ?? 0); },
         SWATCH[COLOURS[(L.colour ?? 0) % COLOURS.length]]),
       btn(`dbg-rnd-${id}`, "🎲", () => { doll.look = randomLook(); }),

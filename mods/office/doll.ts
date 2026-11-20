@@ -3,6 +3,7 @@
 // tools/build_video.py): the girl without her pink parts, a mask of those parts filled with
 // her colour, and the shadows and shine on top.
 import { div, image, svg } from "gpui-kit";
+import type { Color, NativeElement } from "gpui-kit";
 import { CHAR as jirai } from "./chars/jirai/char.js";
 import { CHAR as intern } from "./chars/intern/char.js";
 import { CHAR as designerCute } from "./chars/designer-cute/char.js";
@@ -11,9 +12,17 @@ import { CHAR as wavyBlouse } from "./chars/wavy-blouse/char.js";
 import { CHAR as twintailBlazer } from "./chars/twintail-blazer/char.js";
 import { CHAR as bobJacket } from "./chars/bob-jacket/char.js";
 
+// One action's frames in a character's sheets (chars/*/char.js, made by tools/build_video.py).
+export interface Anim { n: number; ms: number; w: number; h: number; cx: number; feet: number; cols: number; pingpong?: boolean }
+export interface Char { stand: number; pad: number; anim: Record<string, Anim> }
+// A hand-picked look (the debug panel): indexes into COLOURS and CHARACTERS.
+export interface Look { colour?: number; char?: number }
+// What localStorage keeps per agent: her character and hair colour (an older entry is just the name).
+type Cast = { char: string; colour?: number };
+
 // The characters, by folder name in chars/. New ones go at the end: debug coworkers pick
 // theirs by index.
-const CAST = {
+const CAST: Record<string, Char> = {
   jirai, intern, "designer-cute": designerCute, "engineer-hoodie": engineerHoodie,
   "wavy-blouse": wavyBlouse, "twintail-blazer": twintailBlazer, "bob-jacket": bobJacket,
 };
@@ -30,7 +39,7 @@ const WALK_PACE = 0.6;
 
 // The hair colours (also eyes and ribbon). Keep them about as light as "pink" (the colour in
 // the videos): the shading on top only makes them darker or lighter from there.
-export const SWATCH = {
+export const SWATCH: Record<string, Color> = {
   pink: "#f6a6be", rose: "#f39aa9", coral: "#f6a68e", peach: "#f6bb92",
   honey: "#efcf82", lemon: "#e9de8c", lime: "#c4e090", mint: "#93dfbd",
   aqua: "#8dd6dc", sky: "#98c4f0", periwinkle: "#a8b0f2", lilac: "#c6a3ee",
@@ -39,7 +48,7 @@ export const SWATCH = {
 export const COLOURS = Object.keys(SWATCH);
 
 // The same number every time for the same address.
-export function hash(address) {
+export function hash(address: string): number {
   let h = 2166136261;
   for (const ch of address) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   return h;
@@ -47,7 +56,7 @@ export function hash(address) {
 
 // Looks chosen by hand (the debug panel): address -> { colour: index into COLOURS,
 // char: index into CHARACTERS }.
-export const FIXED = {};
+export const FIXED: Record<string, Look> = {};
 
 // Which character each agent is, and her hair colour: picked the first time she shows up,
 // then kept in localStorage, so she stays the same after Herdr restarts. The character is one
@@ -57,59 +66,60 @@ export const FIXED = {};
 // (the entry is just the character's name) keep the colour from their address.
 const CAST_KEY = "office.cast";
 const CAST_MAX = 400; // forget the oldest past this many
-let cast = null;
-let present = [];
+let cast: Record<string, string | Cast> | null = null;
+let present: string[] = [];
 
 // Who's in the office now (agents and debug coworkers), to keep new girls' looks apart.
-export function setPresent(addresses) { present = addresses; }
+export function setPresent(addresses: string[]) { present = addresses; }
 
-function looks(address) {
+function looks(address: string): Cast {
   if (!cast) {
-    try { cast = JSON.parse(localStorage.getItem(CAST_KEY)) || {}; } catch { cast = {}; }
+    try { cast = JSON.parse(localStorage.getItem(CAST_KEY) as string) || {}; } catch { cast = {}; }
   }
-  const e = cast[address];
+  const c = cast!;
+  const e = c[address];
   if (typeof e === "string" && e in CAST) return { char: e };
-  if (e && e.char in CAST) return e;
-  const used = Object.fromEntries(CHARACTERS.map((n) => [n, 0]));
-  for (const v of Object.values(cast)) { const n = typeof v === "string" ? v : v?.char; if (n in used) used[n]++; }
+  if (e && (e as Cast).char in CAST) return e as Cast; // a string here is a character no longer in CAST
+  const used: Record<string, number> = Object.fromEntries(CHARACTERS.map((n) => [n, 0]));
+  for (const v of Object.values(c)) { const n = typeof v === "string" ? v : v?.char; if (n in used) used[n]++; }
   const least = Math.min(...Object.values(used));
   const pick = CHARACTERS.filter((n) => used[n] === least);
   const char = pick[Math.floor(Math.random() * pick.length)];
   // Only those whose looks are settled (two newcomers at once: the second sees the first).
-  const settled = (o) => o !== address && (typeof FIXED[o]?.char === "number" || cast[o]);
+  const settled = (o: string) => o !== address && (typeof FIXED[o]?.char === "number" || c[o]);
   const twins = new Set(present.filter((o) => settled(o) && castOf(o) === char).map((o) => colourOf(o)));
   let colour = hash(address) % COLOURS.length;
   if (twins.has(COLOURS[colour])) {
     const free = COLOURS.map((_, i) => i).filter((i) => !twins.has(COLOURS[i]));
     if (free.length) colour = free[Math.floor(Math.random() * free.length)];
   }
-  cast[address] = { char, colour };
-  const keys = Object.keys(cast);
-  for (const k of keys.slice(0, Math.max(0, keys.length - CAST_MAX))) delete cast[k];
-  try { localStorage.setItem(CAST_KEY, JSON.stringify(cast)); } catch {}
-  return cast[address];
+  c[address] = { char, colour };
+  const keys = Object.keys(c);
+  for (const k of keys.slice(0, Math.max(0, keys.length - CAST_MAX))) delete c[k];
+  try { localStorage.setItem(CAST_KEY, JSON.stringify(c)); } catch {}
+  return c[address] as Cast;
 }
 
-export function castOf(address) {
+export function castOf(address: string): string {
   const c = FIXED[address]?.char;
   if (typeof c === "number") return CHARACTERS[c % CHARACTERS.length];
   return looks(address).char;
 }
 
-function colourOf(address) {
+function colourOf(address: string): string {
   const c = FIXED[address]?.colour ?? (typeof FIXED[address]?.char === "number" ? undefined : looks(address).colour);
   return COLOURS[(c ?? hash(address)) % COLOURS.length];
 }
 
 // The hair colour, for things that match it.
-export function outfitColour(address) {
+export function outfitColour(address: string): Color {
   return SWATCH[colourOf(address)];
 }
 
 // A coworker doing `name`, drawn inside a PERSON x BOX box at scale U (px per unit).
 // `face` 1 looks right, -1 left. `at`: where her anchor sits, in units from the box's left
 // edge (8 standing in the middle; 10 seated at a desk, so the hands reach the keyboard).
-export function dollSprite(address, name, face, U, salt = 0, at = 8) {
+export function dollSprite(address: string, name: string, face: number, U: number, salt = 0, at = 8): NativeElement {
   const who = castOf(address), CHAR = CAST[who];
   if (!CHAR.anim[name]) name = "idle";
   const a = name === "walk" ? { ...CHAR.anim.walk, ms: Math.round(CHAR.anim.walk.ms * WALK_PACE) } : CHAR.anim[name];
@@ -128,7 +138,7 @@ export function dollSprite(address, name, face, U, salt = 0, at = 8) {
 // How long until the next redraw: the shortest frame time of what was drawn since the last
 // call, so every frame shows (a longer wait skips frames unevenly and she looks jerky).
 let fastest = Infinity;
-export function frameTick(most) {
+export function frameTick(most: number): number {
   const t = Math.min(most, fastest);
   fastest = Infinity;
   return t;
@@ -138,14 +148,14 @@ export function frameTick(most) {
 // per layer and facing (tools/pack_sheets.py): frames in a grid, `cols` across, `pad` px
 // apart. Her box shows one cell; changing frames only moves the sheets inside it, so nothing
 // new has to load (separate files per frame made her blink out on a slower Mac with many girls).
-function frame(who, name, i, face, U, colour) {
+function frame(who: string, name: string, i: number, face: number, U: number, colour: Color): NativeElement {
   const CHAR = CAST[who], a = CHAR.anim[name];
   const k = (STAND_U * U) / CHAR.stand;
   const W = a.w * k, H = a.h * k;
   const pw = (a.w + CHAR.pad) * k, ph = (a.h + CHAR.pad) * k;
   const rows = Math.ceil(a.n / a.cols);
   const f = `mods/office/chars/${who}/${name}${face < 0 ? "_l" : ""}`;
-  const layer = (el) => el.absolute().left(-(i % a.cols) * pw).top(-Math.floor(i / a.cols) * ph).w(a.cols * pw).h(rows * ph);
+  const layer = (el: NativeElement) => el.absolute().left(-(i % a.cols) * pw).top(-Math.floor(i / a.cols) * ph).w(a.cols * pw).h(rows * ph);
   return div().absolute().w(W).h(H).overflow_hidden()
     .child(layer(image(`${f}.png`)))
     .child(layer(svg(`${f}_hair.svg`).text_color(colour)))
@@ -157,12 +167,12 @@ function frame(who, name, i, face, U, colour) {
 // facing), a few per render, for each character and scale that has been drawn; put it first
 // in the scene, under everything else, where it can't be seen. Once one is done it draws
 // nothing more.
-const warm = new Map(); // "character scale" -> how many sheets are done
-const ALL = Object.fromEntries(CHARACTERS.map((who) => [who, Object.keys(CAST[who].anim).flatMap((name) => [[name, 0, 1], [name, 0, -1]])]));
+const warm = new Map<string, number>(); // "character scale" -> how many sheets are done
+const ALL: Record<string, [string, number, number][]> = Object.fromEntries(CHARACTERS.map((who) => [who, Object.keys(CAST[who].anim).flatMap((name): [string, number, number][] => [[name, 0, 1], [name, 0, -1]])]));
 const WARM_BATCH = 6;
 
-export function warmup() {
-  const out = [];
+export function warmup(): NativeElement[] {
+  const out: NativeElement[] = [];
   for (const [key, done] of warm) {
     const [who, U] = key.split(" "), all = ALL[who];
     if (done >= all.length) continue;
