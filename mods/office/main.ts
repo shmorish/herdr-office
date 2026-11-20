@@ -422,7 +422,7 @@ export default class Office extends View {
   // Along the wall, clear of the door and the kitchen: a window every third spot, the clock
   // halfway between the first two, and the remote call (when there is one) after the second.
   wall(W: number, g: Geometry, sk: S.Sky, list: Coworker[], callers: Coworker[], all: Term[], now: number) {
-    const { U, wallBottom, zoneX } = g;
+    const { U, wallBottom } = g;
     const top = 8 * U;
     const els: NativeElement[] = [];
     const remotes: S.Remote[] = callers.map((a) => ({
@@ -756,8 +756,8 @@ export default class Office extends View {
     const shelf = c.goal === "perch" ? (this.catShelves ?? [])[c.perch!] : null;
     const napping = onDesk || (c.goal === "perch" && c.nap);
     const onBooks = c.goal === "perch" && !shelf;
-    const x = onDesk ? pos!.x + 12 * U : shelf ? shelf.x : onBooks ? g.shelfX : (c.x ?? g.couchX - 12 * U);
-    const y = onDesk ? pos!.y - 12.6 * U : shelf ? shelf.y : onBooks ? g.floorY - S.ART.bookshelf.h * U : g.floorY;
+    const x = pos ? pos.x + 12 * U : shelf ? shelf.x : onBooks ? g.shelfX : (c.x ?? g.couchX - 12 * U);
+    const y = pos ? pos.y - 12.6 * U : shelf ? shelf.y : onBooks ? g.floorY - S.ART.bookshelf.h * U : g.floorY;
     // She doesn't fly: off a desk she hops straight down first, then walks along the floor to
     // under the next spot, then hops straight up. One leg at a time; the next starts when it ends.
     const key = `${c.goal}-${c.desk}-${c.since}`;
@@ -787,7 +787,7 @@ export default class Office extends View {
   // After dark: the room dims and busy screens glow.
   night(W: number, H: number, g: Geometry, byDesk: Record<number, Coworker>, deskCount: number, alarmed: Coworker[]) {
     const U = g.U;
-    const els = [div().absolute().left(0).top(0).w(W).h(H).bg("#2a2350").opacity(0.42 * S.nightDim())]; // less in a dark scene
+    const els = [div().absolute().left(0).top(0).w(W).h(H).bg("#2a2350").opacity(0.42)];
     const [sx, sy, sw, sh] = S.DESK.screen;
     for (let i = 0; i < deskCount; i++) {
       const a = byDesk[i];

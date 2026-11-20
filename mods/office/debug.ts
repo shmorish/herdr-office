@@ -1,4 +1,4 @@
-// The settings panel behind the ⚙️ in the corner: the language, and for trying things out,
+// The settings panel behind the ⚙️ in the corner: for trying things out,
 // fake coworkers with a chosen action, look, sub-agents and whether they're remote, a time of
 // day, and buttons for tea time and the water reminder. All kept in
 // localStorage. Fake coworkers are placed like real agents but don't count on the board and
@@ -10,7 +10,7 @@ import type { Look } from "./doll.js";
 import { t } from "./i18n.js";
 
 // A fake coworker in the panel.
-export interface FakeDoll { id: number; action: string; look: Look; kids?: number; remote?: boolean }
+interface FakeDoll { id: number; action: string; look: Look; kids?: number; remote?: boolean }
 // The panel's state, kept in localStorage. Times are Date.now() ms.
 export interface DebugState {
   open: boolean; debug: boolean; next: number; dolls: FakeDoll[];
@@ -22,11 +22,11 @@ export interface FakeAgent {
   space_name: string; tab_name: string; title: string;
 }
 // A fake sub-agent, shaped like herdr's terminals.
-export interface FakeKid { address: string; parent: string; state: string; status: string }
+interface FakeKid { address: string; parent: string; state: string; status: string }
 
 const KEY = "office.debug";
 const MAX = 6;
-export const ACTIONS = ["idle", "walk", "typing", "blocked", "alarm", "done", "sleep"];
+const ACTIONS = ["idle", "walk", "typing", "blocked", "alarm", "done", "sleep"];
 
 export function load(): DebugState {
   try {
@@ -51,12 +51,12 @@ function clearDebug(d: DebugState) {
   delete d.water;
 }
 
-export function randomLook(): Required<Look> {
+function randomLook(): Required<Look> {
   return { colour: Math.floor(Math.random() * COLOURS.length), char: Math.floor(Math.random() * CHARACTERS.length) };
 }
 
 // Debug clock: the hour the room pretends it is (null = the real one).
-export const TIMES: (number | null)[] = [null, 12, 18, 22];
+const TIMES: (number | null)[] = [null, 12, 18, 22];
 
 // "walk" goes back and forth between the desk and the cooler every 6 s.
 const statusOf = (action: string, now: number) =>

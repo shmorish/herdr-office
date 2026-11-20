@@ -13,8 +13,8 @@ import { CHAR as twintailBlazer } from "./chars/twintail-blazer/char.js";
 import { CHAR as bobJacket } from "./chars/bob-jacket/char.js";
 
 // One action's frames in a character's sheets (chars/*/char.js, made by tools/build_video.py).
-export interface Anim { n: number; ms: number; w: number; h: number; cx: number; feet: number; cols: number; pingpong?: boolean }
-export interface Char { stand: number; pad: number; anim: Record<string, Anim> }
+interface Anim { n: number; ms: number; w: number; h: number; cx: number; feet: number; cols: number; pingpong?: boolean }
+interface Char { stand: number; pad: number; anim: Record<string, Anim> }
 // A hand-picked look (the debug panel): indexes into COLOURS and CHARACTERS.
 export interface Look { colour?: number; char?: number }
 // What localStorage keeps per agent: her character and hair colour (an older entry is just the name).
@@ -109,11 +109,6 @@ export function castOf(address: string): string {
 function colourOf(address: string): string {
   const c = FIXED[address]?.colour ?? (typeof FIXED[address]?.char === "number" ? undefined : looks(address).colour);
   return COLOURS[(c ?? hash(address)) % COLOURS.length];
-}
-
-// The hair colour, for things that match it.
-export function outfitColour(address: string): Color {
-  return SWATCH[colourOf(address)];
 }
 
 // A coworker doing `name`, drawn inside a PERSON x BOX box at scale U (px per unit).
